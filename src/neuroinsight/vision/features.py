@@ -245,23 +245,132 @@ def detect_faces(bgr: np.ndarray) -> dict:
 
 
 def extract_text(bgr: np.ndarray) -> dict:
-    """OCR via the native macOS Vision framework.
+    """OCR with automatic engine selection.
 
-    Uses Apple's Vision because it is a real, high-accuracy OCR engine already
-    present on the machine — no extra binary, no model download, and no tesseract
-    system dependency. Returns early with an explicit status if unavailable, rather
-    than pretending the image contains no text.
+    Engine priority:
+      1. **Apple Vision** (macOS only) - native, fast, no install needed.
+      2. **Tesseract** via pytesseract (any OS) - requires the user to install the
+         `tesseract` binary (macOS: `brew install tesseract`, Debian/Ubuntu:
+         `sudo apt install tesseract-ocr`).
+      3. Neither - return an explicit `unavailable` status. We never return an empty
+         result as though the image genuinely contained no text.
     """
+    vision_error = tess_error = None
+
+    if _vision_available():
+        try:
+            return _ocr_vision(bgr)
+        except Exception as exc:  # pragma: no cover - platform dependent
+            vision_error = f"{type(exc).__name__}: {exc}"
+
+    if _tesseract_available():
+        try:
+            result = _ocr_tesseract(bgr)
+            result["fallback_note"] = (
+                "Apple Vision unavailable on this platform; used Tesseract instead. "
+                "Tesseract is typically weaker on stylised display type."
+            )
+            return result
+        except Exception as exc:  # pragma: no cover
+            tess_error = f"{type(exc).__name__}: {exc}"
+
+    reasons = []
+    if vision_error:
+        reasons.append(f"macOS Vision failed ({vision_error})")
+    if tess_error:
+        reasons.append(f"Tesseract failed ({tess_error})")
+
+    return {
+        "available": False,
+        "status": "unavailable",
+        "reason": "; ".join(reasons) or "no OCR engine available on this platform",
+        "install_hint": (
+            "macOS: built in. Linux: `sudo apt install tesseract-ocr` then "
+            "`uv pip install pytesseract`. Windows: install Tesseract, add to PATH."
+        ),
+        "blocks": [],
+        "block_count": 0,
+        "total_words": 0,
+        "mean_confidence": 0.0,
+    }
+
+
+def _vision_available() -> bool:
     try:
-        import Quartz
-        import Vision
+        import Quartz  # noqa: F401
+        import Vision  # noqa: F401
     except ImportError:
-        return {
-            "available": False,
-            "status": "unavailable",
-            "reason": "macOS Vision framework not importable (non-macOS build?)",
-            "blocks": [],
-        }
+        return False
+    return True
+
+
+def _tesseract_available() -> bool:
+    try:
+        import pytesseract  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _ocr_tesseract(bgr: np.ndarray) -> dict:
+    """Tesseract fallback for platforms without Apple Vision."""
+    import pytesseract
+    from pytesseract import Output
+
+    h, w = bgr.shape[:2]
+    scale = 2.0 if max(h, w) < 1200 else 1.0
+    if scale != 1.0:
+        bgr = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        h, w = bgr.shape[:2]
+
+    data = pytesseract.image_to_data(
+        bgr, output_type=Output.DICT, lang="eng", config="--psm 11"
+    )
+
+    blocks = []
+    for i, text in enumerate(data["text"]):
+        if not text or not str(text).strip():
+            continue
+        try:
+            conf = float(data["conf"][i])
+        except (TypeError, ValueError):
+            conf = -1.0
+        if conf < 0:
+            continue
+        x, y = int(data["left"][i]), int(data["top"][i])
+        bw, bh = int(data["width"][i]), int(data["height"][i])
+        blocks.append({
+            "text": str(text).strip(),
+            "confidence": round(conf / 100.0, 4),
+            "x": round(x, 1), "y": round(y, 1),
+            "w": round(bw, 1), "h": round(bh, 1),
+            "area_pct": round(100 * (bw * bh) / (w * h), 3),
+        })
+
+    blocks.sort(key=lambda b: -b["area_pct"])
+    return {
+        "available": True,
+        "status": "ok",
+        "engine": "Tesseract (via pytesseract)",
+        "licence": "Apache-2.0 (Tesseract)",
+        "block_count": len(blocks),
+        "total_words": sum(len(b["text"].split()) for b in blocks),
+        "mean_confidence": round(
+            float(np.mean([b["confidence"] for b in blocks])) if blocks else 0.0, 4
+        ),
+        "blocks": blocks[:40],
+        "limitations": [
+            "Confidence reflects OCR legibility, not persuasive intent.",
+            "Tesseract is weaker than Apple Vision on stylised display type.",
+            "Small or low-contrast text is frequently missed.",
+        ],
+    }
+
+
+def _ocr_vision(bgr: np.ndarray) -> dict:
+    """Apple Vision OCR - the preferred engine on macOS."""
+    import Quartz
+    import Vision
 
     h, w = bgr.shape[:2]
     scale = 2.0 if max(h, w) < 1200 else 1.0
