@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroInsight by Aanishka</title>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>◉</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div>
+      <h1>NeuroInsight <span class="by">by Aanishka</span></h1>
+      <p class="tag">Turning visual stimuli into neuroscience-informed insights</p>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="navbtn" data-view="about">About &amp; method</button>
+    <a class="navbtn" href="/docs" target="_blank" rel="noopener">API</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ============================ UPLOAD VIEW ============================ -->
+  <section id="view-upload" class="view active">
+    <div class="hero">
+      <h2>Analyse a visual stimulus</h2>
+      <p>Upload an advertisement, package design, poster or campaign image. Every
+         number below is computed from your file, and every claim is labelled by how
+         it was established.</p>
+    </div>
+
+    <div id="drop" class="drop" tabindex="0" role="button"
+         aria-label="Choose an image to analyse">
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="drop-inner">
+        <svg viewBox="0 0 24 24" class="drop-ico" aria-hidden="true">
+          <path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+        </svg>
+        <p class="drop-main">Drop an image here, or <span class="link">browse</span></p>
+        <p class="sub">JPEG, PNG, WebP, BMP or TIFF &middot; up to 12 MB</p>
+      </div>
+    </div>
+
+    <div class="samples">
+      <span class="samples-label">No image to hand?</span>
+      <button class="chip" data-sample="synthetic">Synthetic demo ad</button>
+      <span class="note-inline">clearly labelled as synthetic test input</span>
+    </div>
+
+    <div id="status" class="status" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <p class="status-main">Analysing your image…</p>
+        <p class="status-sub" id="status-sub">computing visual features</p>
+      </div>
+    </div>
+
+    <div id="error" class="error" hidden role="alert"></div>
+  </section>
+
+  <!-- =========================== RESULTS VIEW ============================ -->
+  <section id="view-results" class="view" hidden>
+    <div class="rhead">
+      <button class="back" id="back-btn">&larr; Analyse another</button>
+      <div class="rhead-meta">
+        <span id="rdims" class="pill"></span>
+        <span id="rtime" class="pill"></span>
+      </div>
+    </div>
+
+    <div class="grid-vis">
+      <figure class="card">
+        <figcaption>Original</figcaption>
+        <img id="img-original" alt="Uploaded image">
+      </figure>
+      <figure class="card">
+        <figcaption>Predicted attention map</figcaption>
+        <img id="img-saliency" alt="Computed saliency map">
+      </figure>
+      <figure class="card">
+        <figcaption>Overlay</figcaption>
+        <img id="img-overlay" alt="Saliency overlaid on the original">
+      </figure>
+    </div>
+
+    <div class="caveat">
+      <strong>Predicted attention — not measured gaze.</strong>
+      No person was observed viewing this image. The map is a computational estimate
+      of where attention tends to fall.
+    </div>
+
+    <div class="cols">
+      <div class="col-main">
+        <section class="card block">
+          <h3>Executive summary</h3>
+          <p id="exec-summary" class="lead"></p>
+        </section>
+
+        <section class="card block">
+          <h3>Findings <span class="count" id="find-count"></span></h3>
+          <div class="legend" id="legend"></div>
+          <div id="findings"></div>
+        </section>
+
+        <section class="card block">
+          <h3>Recommendations
+            <span class="hint">hypotheses to test, not proven improvements</span></h3>
+          <div id="recs"></div>
+        </section>
+
+        <section class="card block">
+          <h3>References</h3>
+          <ol id="refs" class="refs"></ol>
+        </section>
+      </div>
+
+      <aside class="col-side">
+        <section class="card block">
+          <h3>Palette</h3>
+          <div id="palette" class="palette"></div>
+        </section>
+
+        <section class="card block">
+          <h3>Measured features</h3>
+          <table id="features" class="kv"></table>
+        </section>
+
+        <section class="card block">
+          <h3>Attention distribution</h3>
+          <div id="salgrid" class="salgrid"></div>
+          <p id="salnote" class="tiny"></p>
+        </section>
+
+        <section class="card block">
+          <h3>Pipeline</h3>
+          <table id="stages" class="kv"></table>
+        </section>
+
+        <a id="dl" class="download" download>Download PDF report</a>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================= ABOUT VIEW ============================= -->
+  <section id="view-about" class="view" hidden>
+    <div class="prose">
+      <h2>What this tool does, and what it cannot do</h2>
+
+      <p>NeuroInsight computes properties of <strong>images</strong>. It does not
+         measure people.</p>
+
+      <h3>How findings are labelled</h3>
+      <dl class="defs">
+        <dt><span class="tagdot" data-k="measurement"></span>Measurement</dt>
+        <dd>Computed directly from your pixels. Recomputable and exact.</dd>
+        <dt><span class="tagdot" data-k="model_output"></span>Model output</dt>
+        <dd>A prediction from a pretrained algorithm. An informed guess, not a fact.</dd>
+        <dt><span class="tagdot" data-k="literature"></span>Literature</dt>
+        <dd>A mechanism established by published research — true in general, not
+            specific to your image.</dd>
+        <dt><span class="tagdot" data-k="hypothesis"></span>Hypothesis</dt>
+        <dd>Our reading of your image. Plausible, unproven.</dd>
+        <dt><span class="tagdot" data-k="unverifiable"></span>Not determinable</dt>
+        <dd>Cannot be established from a static image. We say so rather than guess.</dd>
+      </dl>
+
+      <h3>What is deliberately absent</h3>
+      <p>There is no emotion score, no purchase-intent probability, and no neural
+         activation estimate anywhere in this report. Producing those would require
+         participant data and a model trained and validated on that specific outcome.
+         We do not have either, so a number here would be fiction dressed as
+         measurement.</p>
+
+      <h3>Models used</h3>
+      <p id="about-models" class="tiny"></p>
+
+      <h3>Limitations</h3>
+      <ul id="about-lims" class="tiny"></ul>
+
+      <h3>Not a medical or commercial instrument</h3>
+      <p>This is a research prototype built by a biology student. It is not clinically
+         validated, not a commercial neuromarketing system, and not a substitute for
+         fMRI, eye-tracking or a controlled field experiment.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>NeuroInsight by Aanishka · computational neuroscience prototype</span>
+  <span id="foot-ver" class="tiny"></span>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

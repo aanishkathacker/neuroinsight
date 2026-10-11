@@ -1,0 +1,188 @@
+/* NeuroInsight by Aanishka
+   Restrained, research-instrument aesthetic: neutral greys, one accent teal,
+   and provenance colours used only where meaning depends on them. */
+
+:root{
+  --ink:#12161C; --ink-2:#39424E; --muted:#6B7684; --line:#E2E7EC;
+  --bg:#F7F9FA; --card:#FFFFFF; --accent:#2F6F8F; --accent-dk:#245A75;
+  --radius:10px;
+
+  --measurement:#1F6F43; --model_output:#8A5A00;
+  --literature:#2F5F8F; --hypothesis:#8B3A62; --unverifiable:#6B6B6B;
+  --tint-measurement:#EAF3EE; --tint-model:#FBF3E4; --tint-lit:#EAF0F7;
+  --tint-hyp:#F8EDF2; --tint-unver:#EFEFEF;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+  color:var(--ink); background:var(--bg); line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+
+/* ---------------------------------------------------------------- top bar */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+  padding:14px 32px; background:var(--card); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:20;
+}
+.brand{display:flex; align-items:center; gap:13px}
+.mark{
+  width:32px;height:32px;border-radius:8px;flex:0 0 auto;
+  background:
+    radial-gradient(circle at 32% 30%, #6FB6D6 0 22%, transparent 23%),
+    radial-gradient(circle at 68% 40%, #2F6F8F 0 28%, transparent 29%),
+    radial-gradient(circle at 46% 72%, #1B4A61 0 20%, transparent 21%),
+    linear-gradient(140deg,#0F2230,#2F6F8F);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.topbar h1{margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.topbar .by{font-weight:400;color:var(--muted)}
+.tagline,.tag{margin:1px 0 0;font-size:12px;color:var(--muted)}
+.nav{display:flex;gap:6px}
+.navbtn{
+  background:none;border:1px solid transparent;border-radius:7px;
+  padding:6px 11px;font:inherit;font-size:13px;color:var(--ink-2);
+  cursor:pointer;text-decoration:none;
+}
+.navbtn:hover{background:#F1F4F6;border-color:var(--line);color:var(--accent-dk)}
+
+main{max-width:1240px;margin:0 auto;padding:30px 32px 70px}
+.view[hidden]{display:none}
+
+/* ------------------------------------------------------------------- hero */
+.hero{max-width:760px;margin:0 auto 26px;text-align:center}
+.hero h2{margin:0 0 8px;font-size:26px;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--muted);font-size:14.5px}
+
+/* ------------------------------------------------------------------- drop */
+.drop{
+  border:1.5px dashed #C3CDD6; border-radius:14px; background:var(--card);
+  padding:46px 24px; text-align:center; cursor:pointer; transition:.15s;
+  max-width:760px; margin:0 auto;
+}
+.drop:hover,.drop:focus-visible,.drop.hot{border-color:var(--accent);background:#FAFCFD;outline:none}
+.drop-ico{width:38px;height:38px;stroke:var(--accent);stroke-width:1.6;fill:none;margin-bottom:10px}
+.drop-main{margin:0;font-size:15px;font-weight:550}
+.link{color:var(--accent);text-decoration:underline}
+.drop .sub{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+
+.samples{max-width:760px;margin:14px auto 0;display:flex;align-items:center;
+  gap:10px;justify-content:center;flex-wrap:wrap;font-size:12.5px}
+.samples-label{color:var(--muted)}
+.chip{
+  border:1px solid var(--line);background:var(--card);border-radius:999px;
+  padding:5px 13px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink-2);
+}
+.chip:hover{border-color:var(--accent);color:var(--accent-dk)}
+.note-inline{color:var(--muted);font-size:11.5px}
+
+/* ----------------------------------------------------------------- status */
+.status{max-width:760px;margin:20px auto 0;display:flex;gap:13px;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px}
+.spinner{width:19px;height:19px;border:2.5px solid #DCE4EA;border-top-color:var(--accent);
+  border-radius:50%;animation:spin .8s linear infinite;flex:0 0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-main{margin:0;font-size:14px;font-weight:550}
+.status-sub{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+
+.error{max-width:760px;margin:18px auto 0;background:#FDF2F1;border:1px solid #EFC9C5;
+  border-left:3px solid #B3382C;border-radius:8px;padding:13px 16px;font-size:13.5px;color:#7A241C}
+.error code{background:rgba(0,0,0,.05);padding:1px 5px;border-radius:4px;font-size:12.5px}
+
+/* -------------------------------------------------------------- results */
+.rhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.back{background:none;border:1px solid var(--line);border-radius:7px;padding:7px 13px;
+  font:inherit;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.back:hover{border-color:var(--accent);color:var(--accent-dk)}
+.rhead-meta{display:flex;gap:8px}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:4px 11px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.grid-vis{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+figure.card{padding:10px}
+figure.card img{width:100%;display:block;border-radius:6px;border:1px solid var(--line);background:#EDF1F4}
+figcaption{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
+  padding:2px 4px 8px;font-weight:600}
+
+.caveat{background:var(--tint-model);border:1px solid #EAD9B4;border-left:3px solid var(--model_output);
+  border-radius:8px;padding:11px 15px;font-size:13px;margin-bottom:20px;color:#5C3E06}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+@media (max-width:940px){.cols{grid-template-columns:1fr}}
+.col-main{display:flex;flex-direction:column;gap:16px}
+.col-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:82px}
+
+.block h3{margin:0 0 10px;font-size:14px;letter-spacing:.01em}
+.block .count{color:var(--muted);font-weight:400;font-size:12.5px}
+.hint{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
+.lead{margin:0;font-size:14px}
+
+/* ---------------------------------------------------------------- finding */
+.finding{border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:10px;background:#FCFDFE}
+.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:#fff;padding:2.5px 8px;border-radius:4px;margin-bottom:7px}
+.badge.measurement{background:var(--measurement)} .badge.model_output{background:var(--model_output)}
+.badge.literature{background:var(--literature)} .badge.hypothesis{background:var(--hypothesis)}
+.badge.unverifiable{background:var(--unverifiable)}
+.finding h4{margin:0 0 5px;font-size:13.5px;font-weight:600;line-height:1.35}
+.finding p{margin:0;font-size:13px;color:var(--ink-2)}
+.finding .conf{margin:7px 0 0;font-size:11.5px;color:var(--muted);font-style:italic}
+.finding .refs-inline{color:var(--accent);cursor:help}
+
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;font-size:11.5px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+/* ----------------------------------------------------------------- table */
+.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+.kv td{padding:5px 0;border-bottom:1px solid #F0F3F5;vertical-align:top}
+.kv td:first-child{color:var(--muted);width:56%}
+.kv td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:550}
+.kv tr:last-child td{border-bottom:none}
+
+.palette{display:flex;gap:5px;flex-wrap:wrap}
+.sw{width:38px}
+.sw-chip{height:42px;border-radius:5px;border:1px solid rgba(0,0,0,.09)}
+.sw-lab{margin-top:3px;font-size:9.5px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+
+.salgrid{display:grid;gap:3px;margin-bottom:8px}
+.salcell{aspect-ratio:1;border-radius:3px;position:relative}
+.salnote{margin:0;font-size:11.5px;color:var(--muted)}
+
+.refs{margin:0;padding-left:19px;font-size:12.5px;color:var(--ink-2)}
+.refs li{margin-bottom:9px}
+.refs .sup{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+
+.rec{border-left:3px solid var(--hypothesis);background:var(--tint-hyp);
+  padding:11px 14px;border-radius:0 8px 8px 0;margin-bottom:10px}
+.rec.p-high{border-left-color:var(--model_output)}
+.rec h4{margin:0 0 5px;font-size:13px}
+.rec p{margin:0 0 5px;font-size:12.5px;color:var(--ink-2)}
+.rec .pri{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#fff;background:var(--hypothesis);
+  padding:1.5px 7px;border-radius:4px;margin-bottom:6px}
+.rec.p-high .pri{background:var(--model_output)}
+
+.download{display:block;text-align:center;background:var(--accent);color:#fff;
+  padding:11px;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600}
+.download:hover{background:var(--accent-dk)}
+
+.prose{max-width:720px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:30px 34px}
+.prose h2{margin:0 0 12px;font-size:21px}
+.prose h3{margin:22px 0 7px;font-size:15px;color:var(--accent-dk)}
+.prose p,.prose li{font-size:14px;color:var(--ink-2)}
+.defs{margin:0}
+.defs dt{font-weight:600;font-size:13.5px;margin-top:11px;display:flex;align-items:center;gap:8px}
+.defs dd{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.tagdot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.tagdot[data-k=measurement]{background:var(--measurement)}
+.tagdot[data-k=model_output]{background:var(--model_output)}
+.tagdot[data-k=literature]{background:var(--literature)}
+.tagdot[data-k=hypothesis]{background:var(--hypothesis)}
+.tagdot[data-k=unverifiable]{background:var(--unverifiable)}
+
+.tiny{font-size:11.5px;color:var(--muted)}
+.foot{border-top:1px solid var(--line);background:var(--card);padding:15px 32px;
+  display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
