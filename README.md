@@ -16,6 +16,26 @@ visual attention, perception and consumer interpretation.
 
 ---
 
+## Screenshots
+
+**Upload**
+![Upload screen](docs/screenshots/01-upload.png)
+
+**Results** — provenance badges, measured features, predicted-attention map, overlay,
+live literature, pipeline timings, downloadable PDF.
+![Results dashboard](docs/screenshots/02-results.png)
+
+**Generated PDF report** (5 pages, from a real run)
+![PDF report page 1](docs/screenshots/03-report-page1.png)
+
+A complete sample report is committed at
+[`docs/screenshots/sample-report.pdf`](docs/screenshots/sample-report.pdf).
+
+> Screenshots are regenerated from live output by `scripts/screenshots.sh`. None are
+> mocked up.
+
+---
+
 ## The problem this project is about
 
 Commercial "neuromarketing" tools routinely publish numbers like *engagement score*,

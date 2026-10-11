@@ -328,4 +328,22 @@
   fetch("/api/health").then((r) => r.json()).then((h) => {
     $("#foot-ver").textContent = `v${h.version} · ${h.status}`;
   }).catch(() => { $("#foot-ver").textContent = "offline"; });
+
+  // ?sample=synthetic auto-runs the bundled sample on load. Useful for presenting
+  // from a single URL, and for automated screenshot capture. This is a real upload
+  // through the normal API path - nothing is stubbed or hardcoded.
+  // ?id=<analysis_id> re-renders a stored result (permalink).
+  const params = new URLSearchParams(location.search);
+  if (params.get("sample") === "synthetic") {
+    loadSample("synthetic");
+  } else if (params.get("id")) {
+    const id = params.get("id");
+    setStatus("Loading analysis…", "fetching stored result");
+    fetch(`/api/analysis/${id}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(
+        "That result is no longer available — the server stores analyses in memory, " +
+        "so links expire when it restarts. Please re-upload the image."))))
+      .then((d) => { render(d); show("results"); stopStatus(); })
+      .catch((e) => { fail(e.message); });
+  }
 })();

@@ -115,6 +115,25 @@ async def analyse_endpoint(file: UploadFile = File(...)) -> dict:
     return d
 
 
+@app.get("/api/analysis/{image_id}")
+def analysis_endpoint(image_id: str) -> dict:
+    """Fetch a stored analysis by id, enabling permalinks (/?id=<id>).
+
+    The store is in-memory, so a permalink only survives until the server restarts.
+    """
+    rec = _STORE.get(image_id)
+    if not rec:
+        raise HTTPException(404, "Unknown or expired analysis id. Re-upload the image.")
+    d = dict(rec["dict"])
+    d["images"] = {
+        "original": f"/api/image/{image_id}/original",
+        "saliency": f"/api/image/{image_id}/saliency",
+        "overlay": f"/api/image/{image_id}/overlay",
+        "report": f"/api/report/{image_id}.pdf",
+    }
+    return d
+
+
 @app.get("/api/image/{image_id}/{kind}")
 def image_endpoint(image_id: str, kind: str) -> Response:
     rec = _STORE.get(image_id)
@@ -123,8 +142,14 @@ def image_endpoint(image_id: str, kind: str) -> Response:
     if kind == "original":
         return Response(_png(rec["original"]), media_type="image/png")
     if kind == "saliency":
-        grey = cv2.cvtColor(rec["saliency"], cv2.COLOR_GRAY2BGR)
-        return Response(_png(grey), media_type="image/png")
+        # rec["saliency"] is float32 in [0,1]. cv2.imencode expects uint8/uint16, so
+        # encoding it raw silently yields a BLACK image (values truncated to 0).
+        # Scale to 8-bit first, then colour-map with the same turbo scale the overlay
+        # uses, so the two panels are visually comparable.
+        u8 = np.clip(rec["saliency"] * 255.0, 0, 255).astype(np.uint8)
+        return Response(
+            _png(cv2.applyColorMap(u8, cv2.COLORMAP_TURBO)), media_type="image/png"
+        )
     if kind == "overlay":
         return Response(
             _png(saliency.overlay(rec["original"], rec["saliency"])),
