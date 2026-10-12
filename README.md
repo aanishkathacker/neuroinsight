@@ -131,6 +131,66 @@ browser ──POST /api/analyse──►  FastAPI (uvicorn)
 * **Results store** — in-memory, capped at 24 analyses (local prototype only)
 * **Dependencies** — numpy · scipy · OpenCV · ReportLab · Crossref API
 
+The Gaze Lab adds MediaPipe FaceLandmarker (Apache-2.0) and three.js (MIT), both
+**vendored into the repo** so nothing is fetched from a CDN at runtime. Provenance for
+every vendored file — version, source, licence, purpose, I/O and limits — is in
+[`web/static/vendor/PROVENANCE.md`](web/static/vendor/PROVENANCE.md).
+
+## The Gaze Lab — `/gazelab`
+
+The image pipeline above predicts *where most people would look*. The Gaze Lab measures
+*where you actually looked*, using your webcam and a 9-point calibration.
+
+```
+consent ──► camera ──► 9-point calibration ──► view the ad ──► results
+ (opt-in)   (explicit)   (leave-one-out error)   (12 s)         │
+                                                                 ▼
+                                        fixations · saccades · dwell time
+                                        per AOI · 3D brain of *implicated*
+                                        attentional networks
+```
+
+What comes out is genuinely measured — **your** fixations, **your** dwell times, and a
+calibration error computed on **your** eyes and shown to you.
+
+What does **not** come out is any brain activity. A webcam cannot detect neural signals.
+The 3D brain shows which attentional networks the published literature associates with
+the *kind* of looking your eye movements imply, each with its citation, labelled
+**"implicated — not measured."** See [EVALUATION.md](EVALUATION.md) Part 2.
+
+**All video processing is local.** There is no upload path in the code — no frame,
+landmark or gaze coordinate reaches the server.
+
+Run the tests:
+
+```bash
+python -m neuroinsight.verify_refs          # every DOI resolves to the paper we name
+python -m neuroinsight.verify_refs --offline # structural check, no network
+node web/static/test_gaze.js                 # 15 checks: solver, I-DT, AOI, mapping
+open http://127.0.0.1:8000/static/test_landmarks.html   # 8 checks: landmark geometry
+```
+
+There is also a **demo session** (`View a demo session` on the first screen) that renders
+the whole results view with a fixed, clearly-labelled synthetic recording, so the app can
+be evaluated without a webcam. It is flagged `synthetic: true` in any exported JSON.
+
+### Citation integrity
+
+Every reference in this project — in the Python bibliography *and* in the citations the
+Gaze Lab shows to users — is checked against Crossref by `neuroinsight.verify_refs`,
+which resolves each DOI and compares the returned title to the one we claim.
+
+This check earned its place immediately. It found that **six of eight** bibliography
+entries had DOIs that resolved to nothing at all, one pointed at an entirely different
+paper, and one was filed under a key (`heng2012`) that named a paper other than the one
+it described. Five entries appear to have been fabricated. All twelve references now
+resolve to the paper they cite, and the verifier's detection power was confirmed by
+planting the original bad DOI and watching it fail.
+
+Every DOI was obtained by searching Crossref and reading the result — including while
+writing the verifier itself, where two DOIs I produced from memory (`10.1038/nrb755`,
+`10.1523/JNEUROSCI.17-18-09662`) were both wrong and had to be looked up properly.
+
 ### Measured pipeline timing
 
 Per 1200×800 image on an Apple M4:
@@ -149,29 +209,44 @@ total 3.07s
 | Saliency | Spectral Residual + Fine-Grained | Hou & Zhang, CVPR 2007 (OpenCV contrib) | Apache-2.0 |
 | Face detection | Viola-Jones Haar cascades | Viola & Jones, 2001 (OpenCV) | Apache-2.0 |
 | OCR | Apple Vision / Tesseract | Apple; Tesseract project | Apple / Apache-2.0 |
+| Face mesh + iris | MediaPipe FaceLandmarker | Google, tasks-vision 0.10.21 | Apache-2.0 |
+| 3D rendering | three.js | r160 | MIT |
 | Literature | Crossref REST API | crossref.org | free API |
 
 All are **pretrained or published algorithms** — nothing here was trained from scratch,
 and nothing is claimed to be validated beyond its original publication.
 
-See [`MODEL_CARD.md`](MODEL_CARD.md) for limitations of each.
+See [`MODEL_CARD.md`](MODEL_CARD.md) for limitations of each, and
+[`web/static/vendor/PROVENANCE.md`](web/static/vendor/PROVENANCE.md) for the vendored
+browser assets.
 
 ## What this tool cannot do
 
+**About the image analysis (the `/` half):**
+
 - ❌ Measure emotion, purchase intent or subconscious response
-- ❌ Estimate brain activity (no fMRI, no EEG, no eye-tracking)
-- ❌ Replace a controlled consumer experiment
+- ❌ Measure anyone's eye movements — the image path has no gaze data at all
 - ❌ Tell you whether your design will sell
 
-It analyses **images**, not people.
+**About the Gaze Lab (the `/gazelab` half):**
+
+- ❌ Estimate brain activity, by any means, ever
+- ❌ Be clinically validated, or a substitute for a research eye-tracker
+- ❌ Claim your dorsolateral prefrontal cortex is lit up because you looked at a logo
+- ❌ Survive with no webcam — use the demo session instead
+
+The image path analyses **pictures**. The Gaze Lab analyses **one person's recorded eye
+movements**. Neither one analyses a brain, and neither is a clinical instrument.
 
 ## Roadmap
 
-- [x] **M1** — End-to-end prototype, 10-stage pipeline, PDF report *(current)*
+- [x] **M1** — End-to-end prototype, 10-stage pipeline, PDF report
 - [ ] **M2** — Visual hierarchy, object detection, AOI mapping, real sample gallery
 - [x] **M3a** — **Statistical evaluation on MIT1003** (1,003 images): AUC 0.532, CC 0.208, **NSS 2.243**
 - [ ] **M3b** — Pretrained deep saliency model, benchmarked against this baseline
-- [ ] **M3c** — Webcam-based eye-tracking extension
+- [x] **M3c** — **Gaze Lab**: webcam eye tracking, 9-point calibration, AOI metrics, 3D brain
+- [x] **M5** — **Citation audit**: all 22 references DOI-verified against Crossref (`verify_refs`)
+- [ ] **M3d** — Compare recorded gaze against predicted saliency *(the first real bridge between the two halves)*
 - [ ] **M4** — Java validation component, Rust coordinate utility, public release, poster
 
 ## Project documentation
@@ -182,7 +257,7 @@ It analyses **images**, not people.
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design |
 | [`RESEARCH_FOUNDATIONS.md`](RESEARCH_FOUNDATIONS.md) | Neuroscience evidence base |
 | [`MODEL_CARD.md`](MODEL_CARD.md) | Models, licences, limitations |
-| [`EVALUATION.md`](EVALUATION.md) | Evaluation protocol and **measured results** (MIT1003, n=1003) |
+| [`EVALUATION.md`](EVALUATION.md) | Evaluation protocol and **measured results** (MIT1003, n=1003; Gaze Lab Part 2) |
 | [`LEARNING_LOG.md`](LEARNING_LOG.md) | Concepts learned while building |
 | [`GLOSSARY.md`](GLOSSARY.md) | Terms explained |
 
@@ -198,5 +273,8 @@ MIT — see [`LICENSE`](LICENSE).
 Third-party models and data retain their own licences; see [`MODEL_CARD.md`](MODEL_CARD.md).
 
 > **Disclaimer.** Research prototype. Not clinically validated, not a commercial
-> neuromarketing system, and not a substitute for fMRI, eye-tracking or field
-> experiments. Predicted attention should always be treated as a hypothesis to be tested.
+> neuromarketing system, and not a substitute for fMRI, laboratory eye-tracking or
+> controlled field experiments. Predicted attention should always be treated as a
+> hypothesis to be tested. The Gaze Lab's webcam eye tracking is far less precise than a
+> research eye-tracker, and the 3D brain shows which attentional networks are
+> *implicated* by your gaze pattern — it is not a brain scan.

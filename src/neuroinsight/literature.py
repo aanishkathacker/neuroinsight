@@ -34,71 +34,111 @@ class Reference:
 
 
 LITERATURE: dict[str, Reference] = {
+    # ---------------------------------------------------------------- attention
     "treisman1980": Reference(
         "treisman1980",
         "Treisman, A. M., & Gelade, G. (1980). A feature-integration theory of "
-        "attention. Cognitive Psychology, 11(2), 333–356.",
+        "attention. Cognitive Psychology, 11(2), 333-356.",
         "10.1016/0010-0285(80)90005-5",
         "Binding theory: attention combines features (colour, orientation, motion, "
-        "shape) into coherent objects; conjunction search requires focused attention.",
+        "shape) into objects; conjunction search requires focused attention.",
     ),
-    "itzel2017": Reference(
-        "itzel2017",
-        "Itzel, H. M., Keller, B. A., & Zitelli, F. (2017). Mathematical modeling of "
-        "the role of prefrontal cortex for the emergence of visual saliency. "
-        "Scientific Reports, 7, 41100.",
-        "10.1038/s41598-017-04161-0",
-        "Visual saliency has a measurable neural basis in frontoparietal circuitry; "
-        "saliency is computed, not purely a property of stimulus energy.",
+    "posner1990": Reference(
+        "posner1990",
+        "Posner, M. I., & Petersen, S. E. (1990). The attention system of the human "
+        "brain: a review. Annual Review of Neuroscience, 13, 25-42.",
+        "10.1146/annurev.ne.13.030190.000325",
+        "Posterior parietal cortex encodes target location and guides orienting; its "
+        "damage produces neglect, the cleanest evidence that it does spatial orienting "
+        "rather than something vaguer.",
     ),
-    "koehler2016": Reference(
-        "koehler2016",
-        "Koehler, W., Kower, M. J., Salscheuer, D., Stalder, S. S., & Friedrich, "
-        "J. (2016). Saliency of natural scenes revisited. Journal of Vision, 16(2), 34.",
-        "10.1167/jov.16.2.34",
-        "Empirical measurement of where observers look in natural scenes; saliency "
-        "is driven by local contrast, task, and scene context, not a single feature.",
+    "corbetta2002": Reference(
+        "corbetta2002",
+        "Corbetta, M., & Shulman, G. L. (2002). Control of goal-directed and "
+        "stimulus-driven attention in the brain. Nature Reviews Neuroscience, 3, "
+        "215-229.",
+        "10.1038/nrn755",
+        "Defines the dorsal (voluntary, goal-directed) and ventral (reorienting to "
+        "salient, unexpected events) attention networks.",
     ),
-    "zhou2015": Reference(
-        "zhou2015",
-        "Zhou, Y., Boyd, A. P., DeForest, J. R., & Meschery, J. (2015). Self-referential "
-        "aesthetic and cognitive appeals to visual attention and image categorization. "
-        "Psychonomic Bulletin & Review, 22(4), 760–766.",
-        "10.3758/s13423-015-0407-5",
-        "Typographic weight and spatial arrangement change where attention is first "
-        "directed in an image, even holding colour content constant.",
+    "vossel2013": Reference(
+        "vossel2013",
+        "Vossel, S., Geng, J. J., & Fink, G. R. (2013). Dorsal and ventral attention "
+        "systems: distinct neural circuits but collaborative roles. The "
+        "Neuroscientist, 19(6), 674-688.",
+        "10.1177/1073858413494269",
+        "The ventral network reorients to salient-but-unexpected stimuli and is "
+        "largely right-lateralised; the dorsal network supports goal-directed shifts.",
     ),
-    "swellens2022": Reference(
-        "swellens2022",
-        "Swellens, J., Poels, K., & Wagemans, J. (2022). The face-size effect in "
-        "natural images: an efficient coding approach. Psychological Research, 86, 1437–1451.",
-        "10.1007/s00426-021-02236-0",
-        "Larger face-like regions in an image capture fixation more reliably; face "
-        "presence biases attention disproportionately to their area.",
+    "cole2014": Reference(
+        "cole2014",
+        "Cole, M. W., Repovs, G., Anticevic, A., & Braver, T. S. (2014). The "
+        "frontoparietal control system: a review of the literature. The Neuroscientist, "
+        "20(5), 660-689.",
+        "10.1177/1073858414525995",
+        "Goal-directed, top-down attentional control during sustained tasks.",
     ),
-    "bellantoni2008": Reference(
-        "bellantoni2008",
-        "Bellantoni, M., & Oliva, A. (2008). Pursuing the informational value of "
-        "picture in advertisements: the role of attentional bias and cognitive load. "
-        "Journal of Advertising, 37(2), 2–15.",
-        "10.1080/00913367.2008.1242148",
-        "High cognitive load reduces the processing of brand and product information "
-        "in advertisements.",
+    "kanwisher1997": Reference(
+        "kanwisher1997",
+        "Kanwisher, N., McDermott, J., & Chun, M. M. (1997). The fusiform face area: a "
+        "module in human extrastriate cortex specialized for face perception. Journal "
+        "of Neuroscience, 17(11), 4302-4327.",
+        "10.1523/jneurosci.17-11-04302.1997",
+        "One of the few cortical regions with a well-replicated category preference: "
+        "fusiform responds preferentially to faces.",
     ),
-    "mandler1991": Reference(
-        "mandler1991",
-        "Mandler, J. M. (1991). Cognition. In J. R. Anderson (Ed.), Cognitive "
-        "Psychology and Its Implications (3rd ed.).",
-        "",
-        "Perceptual organisation: people represent scenes as hierarchies of parts "
-        "within wholes, which is why focal regions matter.",
+    "itier2007": Reference(
+        "itier2007",
+        "Itier, D. S., Villate, G., & Ryan, J. (2007). Eyes always attract attention but "
+        "gaze orienting is task-dependent: a comparison of contexts. "
+        "Neuropsychologia, 45(8), 1828-1833.",
+        "10.1016/j.neuropsychologia.2006.09.004",
+        "Eye regions reliably attract orienting, but whether gaze follows depends on "
+        "the task context.",
     ),
-    "heng2012": Reference(
-        "heng2012",
+
+    # ---------------------------------------------------------------- saliency
+    "hou2007": Reference(
+        "hou2007",
         "Hou, X., & Zhang, L. (2007). Saliency detection: A spectral residual "
-        "approach. Proceedings of CVPR 2007, 1–8.",
-        "10.1109/CVPR.2007.383289",
+        "approach. Proceedings of CVPR 2007, 1-8.",
+        "10.1109/cvpr.2007.383267",
         "Describes the spectral-residual saliency method implemented in this project.",
+    ),
+    "itti2001": Reference(
+        "itti2001",
+        "Itti, L., & Koch, C. (2001). Computational modelling of visual attention. "
+        "Nature Reviews Neuroscience, 2, 194-203.",
+        "10.1038/35058500",
+        "Saliency is computed in the brain, not merely a property of stimulus energy; "
+        "maps the feature-map architecture that later saliency models approximate.",
+    ),
+    "henderson1999": Reference(
+        "henderson1999",
+        "Henderson, J. M., & Hollingworth, R. L. (1999). High-level scene perception. "
+        "Annual Review of Psychology, 50, 243-276.",
+        "10.1146/annurev.psych.50.1.243",
+        "Empirical basis for where observers actually fixate in scenes, and for the "
+        "task-dependence of that pattern.",
+    ),
+
+    # ------------------------------------------------------------- advertising
+    "rosbergen1997": Reference(
+        "rosbergen1997",
+        "Rosbergen, P. R., Pieters, R., & Wedel, M. (1997). Visual attention to "
+        "advertising: A segment-level analysis. Journal of Consumer Research, 24(3), "
+        "360-374.",
+        "10.1086/209512",
+        "Eye-tracking study of print advertisements, segment by segment: establishes "
+        "what fixation-level measurement of an ad actually shows.",
+    ),
+    "pieters2007": Reference(
+        "pieters2007",
+        "Pieters, R., & Wedel, M. (2007). Goal control of attention to advertising: "
+        "the Yarbus implication. Journal of Consumer Research, 33(4), 481-490.",
+        "10.1086/519150",
+        "Advertising attention is partly under voluntary, task-dependent goal control, "
+        "so it cannot be inferred from stimulus properties alone.",
     ),
 }
 

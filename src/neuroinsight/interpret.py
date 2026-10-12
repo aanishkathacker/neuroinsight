@@ -53,7 +53,7 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
             evidence=Evidence.MODEL_OUTPUT,
             value=top["share"],
             unit="fraction of predicted attention",
-            refs=refs("koehler2016", "itzel2017"),
+            refs=refs("itti2001", "henderson1999"),
         )
     )
 
@@ -68,7 +68,10 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
                 "for eye-tracking and should never be reported as measured gaze."
             ),
             evidence=Evidence.LITERATURE,
-            refs=refs("koehler2016", "itzel2017"),
+            # hou2007 is the algorithm actually being run, so it belongs on the
+            # finding that names the algorithm; itti2001/henderson1999 cover why a
+            # saliency prior is meaningful at all.
+            refs=refs("hou2007", "itti2001", "henderson1999"),
         )
     )
 
@@ -127,7 +130,7 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
             evidence=Evidence.MEASUREMENT,
             value=ed,
             unit="fraction of pixels on edges",
-            refs=refs("bellantoni2008"),
+            refs=refs("rosbergen1997"),
         )
     )
 
@@ -146,7 +149,7 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
                 evidence=Evidence.MODEL_OUTPUT,
                 value=faces["total_area_pct"],
                 unit="percent of frame area",
-                refs=refs("swellens2022"),
+                refs=refs("itier2007", "kanwisher1997"),
             )
         )
     else:
@@ -181,7 +184,7 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
                 evidence=Evidence.MODEL_OUTPUT,
                 value=big["area_pct"],
                 unit="percent of frame area",
-                refs=refs("zhou2015"),
+                refs=refs("rosbergen1997", "pieters2007"),
             )
         )
     else:
@@ -257,7 +260,7 @@ def recommendations(features: dict, sal_stats: dict) -> list[dict]:
                 "below ~0.40, then compare with eye-tracking on 15+ participants. "
                 "Primary metric: fixation share on the secondary element."
             ),
-            "basis": refs("koehler2016", "bellantoni2008"),
+            "basis": refs("rosbergen1997", "pieters2007"),
         })
 
     if lum["edge_density"] > 0.09:
@@ -272,7 +275,7 @@ def recommendations(features: dict, sal_stats: dict) -> list[dict]:
                 "A/B test a decluttered variant. Primary metric: unaided brand recall "
                 "after a fixed 3-second exposure, not self-reported liking."
             ),
-            "basis": refs("bellantoni2008"),
+            "basis": refs("rosbergen1997"),
         })
 
     if faces["count"] == 0 and text["status"] == "ok" and text["block_count"] > 0:
@@ -287,7 +290,7 @@ def recommendations(features: dict, sal_stats: dict) -> list[dict]:
                 "Compare a typographic-only variant against one adding a face. "
                 "Measure fixation latency and dwell time on the product."
             ),
-            "basis": refs("swellens2022", "zhou2015"),
+            "basis": refs("kanwisher1997", "rosbergen1997"),
         })
 
     if not recs:
@@ -302,7 +305,7 @@ def recommendations(features: dict, sal_stats: dict) -> list[dict]:
                 "metrics: run an eye-tracking or first-fixation study to establish "
                 "whether predictions hold for this specific stimulus."
             ),
-            "basis": refs("koehler2016"),
+            "basis": refs("henderson1999"),
         })
 
     return recs

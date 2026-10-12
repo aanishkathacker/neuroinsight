@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gaze Lab · landmark regression test</title>
+<link rel="stylesheet" href="/static/styles.css">
+<style>
+  body { padding: 28px 32px; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  p.lede { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; max-width: 720px; line-height: 1.6; }
+  table { border-collapse: collapse; font-size: 13px; width: 100%; max-width: 860px; }
+  th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+       color: var(--muted); border-bottom: 1px solid var(--line); padding: 7px 6px; }
+  td { padding: 8px 6px; border-bottom: 1px solid #F0F3F5; vertical-align: top; }
+  td.st { font-weight: 700; font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .P { color: #1F6F43; } .F { color: #B3382C; }
+  .why { color: var(--muted); font-size: 12px; }
+  code { background: #F1F4F6; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  #summary { font-weight: 700; font-size: 15px; margin: 18px 0 4px; }
+  .banner { background:#FDF3E3; border:1px solid #E3B872; border-left:4px solid #B5761B;
+            border-radius:8px; padding:10px 13px; font-size:12.5px; color:#6B4A0E; max-width:720px; margin-bottom:18px; }
+</style>
+</head>
+<body>
+<h1>Gaze Lab &mdash; landmark &amp; geometry regression test</h1>
+<p class="lede">
+  Runs the real MediaPipe face model against a known face photo and asserts that the
+  geometry in <code>gaze.js</code> is correct. Open this page directly in a browser:
+  <a href="/gazelab">/gazelab</a> must be reachable for the vendored model to load.
+</p>
+
+<div class="banner">
+  This is a test page. It shows pass/fail for internal correctness checks &mdash;
+  it is <strong>not</strong> an accuracy measurement of the tracker. Nothing here
+  demonstrates that webcam gaze tracking is clinically or scientifically valid.
+</div>
+
+<div id="summary">Running&hellip;</div>
+<table>
+  <thead><tr><th style="width:110px">Result</th><th>Check</th><th>Why it matters</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script type="module">
+import { FaceLandmarker, FilesetResolver } from "/static/vendor/tasks-vision.mjs";
+
+// Mirrors gaze.js. If you change one, change both - that duplication is the point of
+// this test: it catches the indices drifting apart.
+const R_CORNERS = [133, 33], R_IRIS = 468;   // image-left eye
+const L_CORNERS = [362, 263], L_IRIS = 473;  // image-right eye
+
+const rows = document.getElementById("rows");
+let pass = 0, fail = 0;
+
+function check(ok, name, why) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="st ${ok ? "P" : "F"}">${ok ? "PASS" : "FAIL"}</td>
+                  <td>${name}</td><td class="why">${why}</td>`;
+  rows.appendChild(tr);
+  ok ? pass++ : fail++;
+}
+
+function eye(lm, [ca, cb], irisIdx) {
+  const a = lm[ca], b = lm[cb], c = lm[irisIdx];
+  if (!a || !b || !c) return null;
+  const w = Math.hypot(b.x - a.x, b.y - a.y);
+  if (!(w > 1e-6)) return null;
+  return { x: (c.x - (a.x + b.x) / 2) / w, y: (c.y - (a.y + b.y) / 2) / w, w };
+}
+
+(async () => {
+  try {
+    const fileset = await FilesetResolver.forVisionTasks("/static/vendor/wasm");
+    const lm = await FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: "/static/vendor/face_landmarker.task", delegate: "GPU" },
+      runningMode: "IMAGE", numFaces: 1,
+    });
+
+    const img = new Image();
+    img.src = "/static/fixture_face.jpg";
+    await img.decode();
+
+    const res = lm.detect(img);
+    lm.close();
+
+    const pts = res.faceLandmarks?.[0];
+    check(!!pts, "A face is detected in the fixture",
+          "If this fails the model, wasm or fixture path is broken.");
+    if (!pts) throw new Error("no landmarks");
+
+    check(pts.length === 478, `Mesh has 478 landmarks (got ${pts.length})`,
+          "Refined meshes add the iris rings; 468 means iris refinement is off and "
+          + "landmarks 468/473 will be undefined.");
+
+    // The regression that matters: iris centroids must sit INSIDE their own eye's
+    // corner span. With the old (133, 362) pairing both irises fell outside.
+    for (const [nm, corners, irisIdx] of [["image-left eye", R_CORNERS, R_IRIS],
+                                          ["image-right eye", L_CORNERS, L_IRIS]]) {
+      const a = pts[corners[0]], b = pts[corners[1]], c = pts[irisIdx];
+      const loX = Math.min(a.x, b.x), hiX = Math.max(a.x, b.x);
+      const loY = Math.min(a.y, b.y), hiY = Math.max(a.y, b.y);
+      check(c.x >= loX && c.x <= hiX && c.y >= loY && c.y <= hiY,
+            `Iris ${irisIdx} lies inside the ${nm} corner span (33/133 or 362/263)`,
+            "Guards against pairing the two inner nose-side corners as if they "
+            + "were one eye, which measures iris offset from the nose bridge.");
+    }
+
+    // Eyes must be distinct and ordered left-to-right in the image.
+    const r = eye(pts, R_CORNERS, R_IRIS), l = eye(pts, L_CORNERS, L_IRIS);
+    check(!!r && !!l, "Both eyes yield a usable estimate",
+          "detect() returns null if either eye is unusable, dropping the frame.");
+    check(r && l && r.w > 0.02 && l.w > 0.02,
+          "Eye widths are plausible (>2% of frame)",
+          `image-left ${r?.w.toFixed(4)}, image-right ${l?.w.toFixed(4)}`);
+
+    // Scale invariance: the whole point of dividing by eye width.
+    const scaled = (k) => {
+      const p = pts.map(q => ({ x: (q.x - 0.5) * k + 0.5, y: (q.y - 0.5) * k + 0.5, z: q.z }));
+      const rr = eye(p, R_CORNERS, R_IRIS), ll = eye(p, L_CORNERS, L_IRIS);
+      return { x: (ll.x + rr.x) / 2, y: (ll.y + rr.y) / 2 };
+    };
+    const a = scaled(1), b = scaled(1.6), c2 = scaled(0.7);
+    const drift = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y),
+                           Math.abs(c2.x - a.x), Math.abs(c2.y - a.y));
+    check(drift < 1e-6, `Raw signal is scale-invariant (drift ${drift.toExponential(1)})`,
+          "A user leaning toward the camera must not shift the reported gaze.");
+
+    // Order-of-magnitude sanity.
+    const raw = { x: (l.x + r.x) / 2, y: (l.y + r.y) / 2 };
+    check(Math.abs(raw.x) < 0.5 && Math.abs(raw.y) < 0.5,
+          `Raw offset is in a sane range (x=${raw.x.toFixed(3)}, y=${raw.y.toFixed(3)})`,
+          "Offsets are in eye-width units; values beyond ~0.5 mean the iris "
+          + "landmark is not where the corners say it should be.");
+
+    const s = document.getElementById("summary");
+    s.innerHTML = fail === 0
+      ? `<span class="P">${pass} passed, ${fail} failed</span>`
+      : `<span class="F">${pass} passed, ${fail} failed</span>`;
+  } catch (e) {
+    document.getElementById("summary").innerHTML =
+      `<span class="F">Test harness error: ${String(e && e.message || e)}</span>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -43,3 +43,60 @@ attention before any semantic processing occurs.
 
 **Epistemic humility** — stating the boundary of what you know. The organising
 principle of this project.
+
+---
+
+## Gaze Lab terms
+
+**Gaze estimation** — inferring where someone is looking from an image of their eyes.
+A webcam gives *direction*, not precision. Calibrated, typical error is a few degrees
+of visual angle; this is far coarser than a research eye-tracker at 1000 Hz.
+
+**9-point calibration** — the user looks at nine known screen positions so the software
+can learn the mapping from raw eye appearance to screen position. Without it, webcam
+gaze is close to unusable for region-level analysis.
+
+**I-DT (dispersion-threshold identification)** — the standard way to split a continuous
+gaze stream into *fixations* (looking) and *saccades* (jumping). This project uses a
+3.5 % dispersion threshold and a 200 ms minimum dwell.
+
+**Fixation** — a sustained look, typically 200–400 ms. Its centre is the closest thing
+to "where they were looking", and its position carries most of the meaning.
+
+**Saccade** — a rapid, ballistic jump between fixations. Not seen as visual detail;
+the brain suppresses perception during them.
+
+**Dwell time** — total time fixations land inside one area of interest. The most
+robust single measure of where attention went.
+
+**First-fixation latency** — time from stimulus onset to the first fixation in a
+region. Indicates salience and priority.
+
+**Scale invariance** — a measurement that does not change when the face gets bigger or
+smaller. Achieved here by expressing iris displacement in units of eye width, so leaning
+toward the camera does not move the reported gaze point.
+
+**Areas of interest (AOIs)** — defined regions of the stimulus (a headline, a logo, a
+button) used to attribute fixations to meaningful parts of a design.
+
+**Implicated, not measured** — the framing this project uses for everything brain-related.
+Eye movements and attention share neural circuitry, so a pattern of looking legitimately
+*suggests* which systems are recruited. It is not an observation of anyone's neurons.
+
+**Frontal eye fields (FEF, BA8)** — frontal cortex that initiates voluntary saccades.
+Recruited by rapid, goal-directed eye movements.
+
+**Posterior parietal / dorsal attention network** — encodes where targets are and guides
+the eyes to them. Damage causes optic ataxia, which is the cleanest evidence that it is
+doing spatial orienting rather than something vaguer.
+
+**Fusiform gyrus** — ventral temporal cortex with preferential responses to faces. One
+of the few regions with a well-replicated category preference.
+
+**Ventral attention network (temporoparietal junction)** — reorients attention to salient
+but *unexpected* events; largely right-lateralised.
+
+**Dorsal frontoparietal control network** — goal-directed, top-down attentional control.
+
+**WebGL / Three.js** — the browser technology behind the 3D brain. The brain is a
+schematic built from primitives, labelled as such; it is not a registered MRI mesh.

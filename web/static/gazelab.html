@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaze Lab · NeuroInsight by Aanishka</title>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/gazelab.css">
+</head>
+<body class="gl">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div>
+      <h1>NeuroInsight <span class="by">by Aanishka</span></h1>
+      <p class="tag">Turning visual stimuli into neuroscience-informed insights</p>
+    </div>
+  </div>
+  <nav class="nav">
+    <a class="navbtn" href="/">Image analysis</a>
+    <a class="navbtn active" href="/gazelab">Gaze Lab</a>
+    <a class="navbtn" href="/">About</a>
+  </nav>
+</header>
+
+<main class="gl-main">
+
+  <!-- ───────────────────────────── CONSENT ───────────────────────────── -->
+  <section id="step-consent" class="step active">
+    <div class="gl-hero">
+      <span class="gl-eyebrow">Gaze Lab</span>
+      <h2>Watch how your own eyes move on an advert</h2>
+      <p class="gl-lead">This records <strong>where you actually looked</strong>, then
+         shows you which attention networks the literature links to that pattern of looking.
+         Real measurements of <em>you</em>, real research about the brain.</p>
+    </div>
+
+    <div class="gl-card consent">
+      <h3>Before we begin</h3>
+      <ul class="plain-list">
+        <li><strong>Your video never leaves this browser.</strong> Every frame is processed
+            on your own machine. Nothing is uploaded, recorded or sent anywhere.</li>
+        <li><strong>We request camera access.</strong> Your browser will ask. If you decline,
+            nothing else happens and no video exists.</li>
+        <li><strong>You are a participant, not a subject.</strong> Nothing here is medical
+            and nothing is diagnostic.</li>
+      </ul>
+
+      <div class="gl-actions">
+        <button id="btn-consent" class="btn btn-primary">Enable camera &amp; continue</button>
+        <button id="btn-demo" class="btn btn-ghost">View a demo session</button>
+        <a class="btn btn-ghost" href="/">Back to image analysis</a>
+      </div>
+      <p class="tiny" id="consent-note"></p>
+      <p class="tiny center demo-note">The demo session uses <strong>made-up numbers</strong>,
+         not a recording of anyone, and is clearly marked as such on the results screen.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── CALIBRATION ────────────────────────── -->
+  <section id="step-cal" class="step" hidden>
+    <div class="gl-hero slim">
+      <span class="gl-eyebrow">Step 1 of 2</span>
+      <h2>Calibration</h2>
+      <p class="gl-lead">Look at each dot and <strong>hold still</strong> until it moves on.
+         Nine points, about 15 seconds. This teaches the software where "left" and
+         "up" are for <em>your</em> eyes.</p>
+    </div>
+
+    <div class="cal-stage">
+      <video id="cam" playsinline muted></video>
+      <canvas id="cam-ov"></canvas>
+      <div id="cal-dot" class="cal-dot"></div>
+      <div id="cal-hint" class="cal-hint">Loading face tracker…</div>
+    </div>
+
+    <div class="cal-progress"><div id="cal-bar"></div></div>
+    <p class="tiny center" id="cal-status">Starting…</p>
+
+    <div class="gl-actions">
+      <button id="btn-cal-retry" class="btn btn-ghost" hidden>Recalibrate</button>
+      <button id="btn-to-stim" class="btn btn-primary" disabled hidden>Continue to the advert</button>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────── STIMULUS ──────────────────────────── -->
+  <section id="step-stim" class="step" hidden>
+    <div class="gl-hero slim">
+      <span class="gl-eyebrow">Step 2 of 2</span>
+      <h2>View it as naturally as you would</h2>
+      <p class="gl-lead">Keep your head roughly still and just <strong>look at the advert</strong>
+         the way you normally would. Don't hunt for anything.</p>
+    </div>
+
+    <div class="gl-toolbar">
+      <label class="gl-file">
+        Use my own image
+        <input type="file" id="stim-file" accept="image/*" hidden>
+      </label>
+      <span class="tiny" id="stim-name">bundled sample</span>
+      <button id="btn-rec" class="btn btn-primary">Start recording</button>
+      <span id="rec-timer" class="rec-timer" hidden>0.0s</span>
+    </div>
+
+    <div class="stim-stage">
+      <img id="stim" src="/static/sample_ad.png" alt="Advert to view">
+      <canvas id="stim-ov"></canvas>
+      <div class="pip" id="pip" hidden></div>
+      <div id="rec-banner" class="rec-banner" hidden><span class="dot"></span> Recording your gaze</div>
+    </div>
+
+    <p class="tiny center" id="stim-status">Ready when you are.</p>
+    <div class="gl-actions">
+      <button id="btn-restart" class="btn btn-ghost" hidden>Record again</button>
+      <button id="btn-to-results" class="btn btn-primary" hidden>See my results</button>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────── RESULTS ───────────────────────────── -->
+  <section id="step-results" class="step" hidden>
+    <div class="gl-hero slim">
+      <span class="gl-eyebrow">Your session</span>
+      <h2>Where you looked</h2>
+    </div>
+
+    <!-- Shown only for the demo session. A synthetic trace must never be mistakable
+         for a recording of a real person, so this is a blocking banner, not a footnote. -->
+    <div id="demo-banner" class="demo-banner" hidden>
+      <strong>Demo session — these numbers are made up.</strong>
+      Nothing here was recorded from a person. It is a fixed example used to show the
+      shape of a session. <button id="btn-demo-real" class="linklike">Record your own instead</button>
+    </div>
+
+    <div class="res-grid">
+      <div class="gl-card">
+        <h3>Your gaze, recorded</h3>
+        <div class="gaze-viz">
+          <img id="res-stim" src="/static/sample_ad.png" alt="Advert analysed">
+          <canvas id="res-overlay"></canvas>
+        </div>
+        <p class="tiny">Dots are your actual fixations, sized by how long you held each
+           one. This is <strong>measured eye-tracking data</strong> — yours.</p>
+      </div>
+
+      <div class="gl-card">
+        <h3>Where you looked first</h3>
+        <div id="aoi-table"></div>
+      </div>
+    </div>
+
+    <div class="gl-card">
+      <h3>Your eye-movement measures</h3>
+      <div id="gaze-stats" class="stat-grid"></div>
+      <p class="tiny" id="cal-note"></p>
+    </div>
+
+    <div class="res-grid brain-row">
+      <div class="gl-card brain-card">
+        <h3>Attentional networks involved</h3>
+        <canvas id="brain-canvas"></canvas>
+        <p class="disclaimer"><strong>Implicated by your gaze pattern — not measured.</strong>
+           A webcam cannot detect brain activity. These regions are the ones the published
+           literature associates with the <em>kind</em> of attentional work your eye
+           movements imply.</p>
+      </div>
+      <div class="gl-card">
+        <h3>What's likely involved, and why</h3>
+        <div id="network-list"></div>
+      </div>
+    </div>
+
+    <div class="gl-card">
+      <h3>How accurate is this?</h3>
+      <div id="accuracy"></div>
+    </div>
+
+    <div class="gl-actions">
+      <button id="btn-again" class="btn btn-primary">Run another session</button>
+      <a class="btn btn-ghost" href="/">Back to image analysis</a>
+      <button id="btn-save" class="btn btn-ghost">Download my data (JSON)</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="fatal" class="gl-fatal" hidden></div>
+<script type="module" src="/static/gazelab.js"></script>
+</body>
+</html>

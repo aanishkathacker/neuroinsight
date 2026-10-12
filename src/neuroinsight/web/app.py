@@ -56,6 +56,12 @@ def index() -> str:
     return (WEB / "static" / "index.html").read_text()
 
 
+@app.get("/gazelab", response_class=HTMLResponse)
+def gazelab() -> str:
+    """Webcam gaze-tracking lab. Everything runs client-side; nothing is uploaded."""
+    return (WEB / "static" / "gazelab.html").read_text()
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {
@@ -187,5 +193,14 @@ def samples() -> JSONResponse:
         return JSONResponse([])
     return JSONResponse(json.loads(d.read_text()))
 
+
+# MediaPipe's runtime fetches its .wasm with streaming compilation, which browsers
+# only accept when the response is typed application/wasm. Without this the tracker
+# fails with an opaque "CompileError" rather than an obvious MIME-type complaint.
+# Starlette resolves mimetypes through the stdlib, so we register them there.
+import mimetypes as _mimetypes
+
+_mimetypes.add_type("application/wasm", ".wasm")
+_mimetypes.add_type("application/octet-stream", ".task")
 
 app.mount("/static", StaticFiles(directory=str(WEB / "static")), name="static")
