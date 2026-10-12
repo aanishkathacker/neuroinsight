@@ -112,6 +112,14 @@ someone a link from your own machine:
 Dies when you stop it, changes every restart, needs your laptop awake. Do not put it in
 a portfolio — use the Render path above for that.
 
+> **Note for this machine.** `tunnel.sh` passes `--edge-ip-version 4`. That is not
+> optional here: Go's DNS resolver queries IPv6 `[::1]:53` first and aborts rather than
+> falling back, so the tunnel dies with
+> `Could not lookup srv records on _v2-origintunneld._tcp.argotunnel.com`. `dig`
+> resolves the same record successfully, which makes it look like an outage instead of
+> a resolver bug. Cloudflare's quick-tunnel API also takes 5–10 s to answer from here,
+> which is why the script polls for up to three minutes.
+
 ## Quick start
 
 ```bash

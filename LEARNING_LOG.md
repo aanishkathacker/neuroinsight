@@ -207,3 +207,41 @@ non-empty, because that is the reasoning a reader can check.
   not a registered anatomical mesh.
 - No gaze data has been collected from real participants yet. Every number in the demo
   session is synthetic, and the demo path exists partly so that this stays visibly true.
+## Milestone 6 — UI redesign, deeper analysis, deployment
+
+**The literature stage was 79% of the pipeline.** 8.5 s of 10.5 s spent re-fetching the
+same Crossref references on every upload, for data that never changes. Memoising
+`retrieve_live()` took the warm path from 10.5 s to ~1.4 s. Failures are deliberately not
+cached, so a transient outage does not pin the process to "no results".
+
+**Four new measurements, all direct pixel computations:** visual weight placement,
+whitespace, quadrant balance, thirds alignment, and typographic hierarchy. Findings went
+10 -> 15; direct measurements 3 -> 7. The new copy is design-shop vocabulary ("breathing
+room", "visual weight") rather than perceptual-science jargon, because the audience for
+that half of the report is designers, not neuroscientists.
+
+### Bug 9 — a tunnel that logged success while serving 530
+
+The first public-link script polled `cloudflared`'s log for "Registered tunnel
+connection" before declaring the URL live. That line appears while the edge is still
+coming up; the URL returned **530** for minutes afterwards. The script would have handed
+out a dead link while reporting success.
+
+*Teaches:* readiness must be proven with a real request to the thing you are about to
+promise. The check is one line and it is now `curl /api/health`.
+
+### Bug 10 — "the network is down" when it was a dead IPv6 resolver
+
+The tunnel then failed with `Could not lookup srv records on
+_v2-origintunneld._tcp.argotunnel.com`. `dig` resolved that record perfectly. The real
+cause: Go's resolver queries IPv6 `[::1]:53` first and **aborts rather than falling back**
+to the IPv4 resolver. Fix is `--edge-ip-version 4`.
+
+*Teaches:* when one tool fails to resolve a name that another tool resolves fine, the
+network is probably fine and the tool's resolver strategy is the bug. Chasing the network
+because the error message *sounds* like a network problem costs an hour and finds
+nothing.
+
+Also: the process-matching in `tunnel.sh` originally required an exact argument string, so
+adding `--edge-ip-version 4` made `status` report "not running" while the tunnel was
+alive and healthy. It now matches on the stable parts of the command line.

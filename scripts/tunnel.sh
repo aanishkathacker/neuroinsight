@@ -31,7 +31,7 @@ PORT="${PORT:-8000}"
 
 case "${1:-status}" in
   start)
-    if pgrep -f "cloudflared tunnel --url http://127.0.0.1:$PORT" >/dev/null 2>&1; then
+    if pgrep -f "cloudflared.*tunnel.*--url.*127.0.0.1:$PORT" >/dev/null 2>&1; then
       echo "already running: $(cat "$URLF" 2>/dev/null)"
       exit 0
     fi
@@ -39,13 +39,20 @@ case "${1:-status}" in
 
     ./scripts/serve.sh start >/dev/null 2>&1
     : > "$LOG"
-    # macOS has no setsid, so nohup + background is the portable equivalent.
-    nohup "$CF" tunnel --url "http://127.0.0.1:$PORT" --no-autoupdate >> "$LOG" 2>&1 &
+    # --edge-ip-version 4 is required on this machine, not optional politeness.
+    # Go's resolver queries DNS over IPv6 [::1]:53 first and fails hard on it
+    # instead of falling back to the IPv4 resolver, so cloudflared aborts with
+    # "Could not lookup srv records on _v2-origintunneld._tcp.argotunnel.com"
+    # and exits. `dig` resolves the same record fine, which makes it look like a
+    # network outage rather than a resolver bug. Forcing IPv4 skips the dead path.
+    nohup "$CF" tunnel --url "http://127.0.0.1:$PORT" --no-autoupdate \
+      --edge-ip-version 4 >> "$LOG" 2>&1 &
     echo $! > "$RUN/tunnel.pid"
 
-    # Cold start is genuinely slow on a first connection; poll rather than sleep once.
+    # Cloudflare's quick-tunnel API takes 5-10s to answer from here, which has
+    # tripped cloudflared's own client timeout before. Poll generously.
     printf "waiting for the tunnel"
-    for _ in $(seq 1 40); do
+    for _ in $(seq 1 60); do
       url=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" "$LOG" 2>/dev/null | head -1)
       if [ -n "$url" ]; then
         # A registered connection is not yet a reachable edge - confirm with a real
@@ -69,7 +76,7 @@ case "${1:-status}" in
     ;;
 
   stop)
-    pkill -f "cloudflared tunnel --url http://127.0.0.1:$PORT" 2>/dev/null && echo "stopped" || echo "not running"
+    pkill -f "cloudflared.*tunnel.*--url.*127.0.0.1:$PORT" 2>/dev/null && echo "stopped" || echo "not running"
     rm -f "$RUN/tunnel.pid"
     ;;
 
@@ -87,7 +94,7 @@ case "${1:-status}" in
   logs) tail -"${2:-40}" "$LOG" 2>/dev/null | sed 's/^/  /' ;;
 
   status|*)
-    if pgrep -f "cloudflared tunnel --url http://127.0.0.1:$PORT" >/dev/null 2>&1; then
+    if pgrep -f "cloudflared.*tunnel.*--url.*127.0.0.1:$PORT" >/dev/null 2>&1; then
       echo "tunnel: running"
       [ -f "$URLF" ] && echo "  $(./scripts/tunnel.sh url)"
     else
