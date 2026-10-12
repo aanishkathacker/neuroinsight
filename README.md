@@ -169,7 +169,9 @@ It analyses **images**, not people.
 
 - [x] **M1** — End-to-end prototype, 10-stage pipeline, PDF report *(current)*
 - [ ] **M2** — Visual hierarchy, object detection, AOI mapping, real sample gallery
-- [ ] **M3** — Pretrained deep saliency model; R statistical evaluation; webcam eye-tracking extension
+- [x] **M3a** — **Statistical evaluation on MIT1003** (1,003 images): AUC 0.532, CC 0.208, **NSS 2.243**
+- [ ] **M3b** — Pretrained deep saliency model, benchmarked against this baseline
+- [ ] **M3c** — Webcam-based eye-tracking extension
 - [ ] **M4** — Java validation component, Rust coordinate utility, public release, poster
 
 ## Project documentation
@@ -180,7 +182,7 @@ It analyses **images**, not people.
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design |
 | [`RESEARCH_FOUNDATIONS.md`](RESEARCH_FOUNDATIONS.md) | Neuroscience evidence base |
 | [`MODEL_CARD.md`](MODEL_CARD.md) | Models, licences, limitations |
-| [`EVALUATION.md`](EVALUATION.md) | Evaluation protocol and results |
+| [`EVALUATION.md`](EVALUATION.md) | Evaluation protocol and **measured results** (MIT1003, n=1003) |
 | [`LEARNING_LOG.md`](LEARNING_LOG.md) | Concepts learned while building |
 | [`GLOSSARY.md`](GLOSSARY.md) | Terms explained |
 

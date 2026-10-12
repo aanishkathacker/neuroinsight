@@ -6,3 +6,5 @@ data/uploads/
 *.pdf
 !docs/**/*.pdf
 .run/
+data/eval/
+data/uploads/

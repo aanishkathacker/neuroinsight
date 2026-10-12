@@ -27,10 +27,11 @@
 
 ## Milestone 3 — Science and models
 
-- [ ] Pretrained deep saliency model, benchmarked against the baseline
-- [ ] R/RStudio evaluation of model performance
+- [x] R/RStudio evaluation of model performance
+- [x] Real measured results on MIT1003 (n=1003): AUC 0.532, CC 0.208, NSS 2.243
+- [x] `EVALUATION.md` with honest limitations
+- [ ] Pretrained deep saliency model, benchmarked against this baseline
 - [ ] Webcam-based eye-tracking extension (opt-in, consent-first)
-- [ ] `EVALUATION.md` with real measured results
 
 ## Milestone 4 — Polish and release
 

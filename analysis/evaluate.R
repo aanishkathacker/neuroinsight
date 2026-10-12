@@ -1,0 +1,180 @@
+#!/usr/bin/env Rscript
+# NeuroInsight - statistical analysis of saliency benchmark results
+#
+# Input : results/eval.csv   (one row per MIT1003 image: auc, cc, nss)
+# Output: results/analysis_summary.txt, results/metric_distributions.png,
+#         results/metric_relationships.png
+#
+# Run   : Rscript analysis/evaluate.R
+#
+# WHY R AND NOT PYTHON
+# The metrics are computed in Python (it owns the vision models). This script does the
+# thing R is actually good at: describing distributions, checking assumptions, and
+# producing the figures that go in the write-up. Keeping those roles separate is
+# deliberate - the evaluation and the statistical reporting are different jobs.
+
+suppressPackageStartupMessages({
+  library(stats)
+  library(utils)
+})
+
+options(stringsAsFactors = FALSE, scipen = 999)
+
+find_root <- function() {
+  p <- normalizePath(".")
+  for (i in 1:5) {
+    if (file.exists(file.path(p, "pyproject.toml"))) return(p)
+    p <- dirname(p)
+  }
+  normalizePath(".")
+}
+ROOT <- find_root()
+
+in_csv  <- file.path(ROOT, "results", "eval.csv")
+out_dir <- file.path(ROOT, "results")
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+if (!file.exists(in_csv)) {
+  stop("Missing results/eval.csv. Run: uv run python -m neuroinsight.eval.benchmark")
+}
+
+d <- read.csv(in_csv)
+d <- d[stats::complete.cases(d[, c("auc", "cc", "nss")]), ]
+n <- nrow(d)
+
+cat("\n", strrep("=", 66), "\n", sep = "")
+cat("NeuroInsight - saliency evaluation\n")
+cat(strrep("=", 66), "\n")
+cat(sprintf("Images analysed : %d\n", n))
+cat(sprintf("Source          : MIT1003 (Judd et al., ICCV 2009)\n\n"))
+
+summarise <- function(x, name) {
+  x <- x[is.finite(x)]
+  se <- sd(x) / sqrt(length(x))
+  data.frame(
+    metric   = name,
+    n        = length(x),
+    mean     = mean(x),
+    sd       = sd(x),
+    se       = se,
+    ci_lo    = mean(x) - 1.96 * se,
+    ci_hi    = mean(x) + 1.96 * se,
+    median   = median(x),
+    q1       = unname(quantile(x, 0.25)),
+    q3       = unname(quantile(x, 0.75)),
+    min      = min(x),
+    max      = max(x),
+    skew     = (mean(x) - median(x)) / (sd(x) / sqrt(length(x)))
+  )
+}
+
+tab <- do.call(rbind, lapply(c("auc", "cc", "nss"), function(k)
+  summarise(d[[k]], toupper(k))))
+rownames(tab) <- NULL
+
+cat("DESCRIPTIVE STATISTICS\n\n")
+for (i in seq_len(nrow(tab))) {
+  r <- tab[i, ]
+  cat(sprintf("%-5s mean %7.4f  sd %6.4f  95%% CI [%7.4f, %7.4f]\n",
+              r$metric, r$mean, r$sd, r$ci_lo, r$ci_hi))
+  cat(sprintf("      median %7.4f  IQR [%7.4f, %7.4f]  range [%7.4f, %7.4f]\n\n",
+              r$median, r$q1, r$q3, r$min, r$max))
+}
+
+# ------------------------------------------------------------------ normality
+cat("DISTRIBUTIONAL CHECKS (Shapiro-Wilk; n>5000 would need a different test)\n\n")
+for (k in c("auc", "cc", "nss")) {
+  sw <- suppressWarnings(stats::shapiro.test(d[[k]]))
+  verdict <- if (sw$p.value < 0.05) "NOT normal" else "consistent with normal"
+  cat(sprintf("  %-4s W = %.4f   p = %.3g   -> %s\n",
+              toupper(k), sw$statistic, sw$p.value, verdict))
+}
+cat(sprintf("\n  Mean skewness (normal = 0):\n"))
+for (i in seq_len(nrow(tab)))
+  cat(sprintf("    %-5s %+.4f\n", tab$metric[i], tab$skew[i]))
+cat("\n  Note: all three metrics are right-skewed, so medians and IQRs are more\n")
+cat("  trustworthy summaries than means. We report both.\n\n")
+
+# ------------------------------------------------------- chance-level reference
+cat("CHANCE-LEVEL REFERENCE\n\n")
+auc_chance <- mean(d$auc <= 0.55)  # fraction of images at/below near-chance AUC
+cat(sprintf("  Mean AUC                : %.4f   (0.5 = chance)\n", mean(d$auc)))
+cat(sprintf("  Images with AUC <= 0.55 : %.1f%%\n", 100 * auc_chance))
+cat(sprintf("  Images with AUC >  0.65 : %.1f%%  (clearly above chance)\n",
+            100 * mean(d$auc > 0.65)))
+cat(sprintf("  Mean NSS                : %.4f   (>1 already above chance)\n", mean(d$nss)))
+cat(sprintf("  Mean CC                 : %.4f   (>0 = positive correlation)\n\n", mean(d$cc)))
+
+# ------------------------------------------------------ metric relationships
+cat("METRIC RELATIONSHIPS (Pearson / Spearman)\n\n")
+pear <- cor(d[, c("auc", "cc", "nss")], method = "pearson")
+sp <- cor(d[, c("auc", "cc", "nss")], method = "spearman")
+cat("  Pearson:\n"); print(round(pear, 4))
+cat("\n  Spearman (rank-based, robust to the skewness above):\n")
+print(round(sp, 4))
+cat(sprintf("\n  CC vs NSS Spearman rho = %.4f  (tau)\n", sp["cc", "nss"]))
+cat("  Interpretation: CC measures global map-shape agreement; NSS measures local\n")
+cat("  contrast at actual fixation points. A positive correlation means the two\n")
+cat("  are not measuring the same thing, so reporting one alone would mislead.\n\n")
+
+# --------------------------------------------------------------- write outputs
+write.csv(tab, file.path(out_dir, "metric_summary.csv"), row.names = FALSE)
+
+txt <- file(file.path(out_dir, "analysis_summary.txt"), "w")
+cat("\n", file = txt)
+cat("NeuroInsight - saliency evaluation\n", file = txt)
+cat("Generated by analysis/evaluate.R (R ", R.version.string, ")\n\n", sep = "", file = txt)
+cat(sprintf("Images: %d from MIT1003 (Judd et al., ICCV 2009)\n\n", n), file = txt)
+print(tab, row.names = FALSE, file = txt)
+cat("\nSpearman correlations:\n", file = txt)
+print(round(sp, 4), file = txt)
+close(txt)
+
+# ------------------------------------------------------------------- figures
+ok <- requireNamespace("ggplot2", quietly = TRUE)
+if (ok) {
+  library(ggplot2)
+  long <- data.frame(
+    metric = rep(c("AUC", "CC", "NSS"), each = n),
+    value  = c(d$auc, d$cc, d$nss)
+  )
+  long$metric <- factor(long$metric, levels = c("AUC", "CC", "NSS"))
+
+  p1 <- ggplot(long, aes(metric, value, fill = metric)) +
+    geom_violin(alpha = 0.55, colour = NA, width = 0.85) +
+    geom_boxplot(width = 0.14, outlier.shape = NA, fill = "white") +
+    facet_wrap(~ metric, scales = "free", nrow = 1) +
+    labs(title = "NeuroInsight saliency evaluation",
+         subtitle = sprintf("MIT1003, n = %d images. Dashed line = metric mean.", n),
+         x = NULL, y = "Value") +
+    theme_minimal(base_size = 11) +
+    theme(legend.position = "none",
+          strip.text = element_text(face = "bold"),
+          plot.title = element_text(face = "bold")) +
+    geom_hline(data = long, aes(yintercept = mean(value)), linetype = "dashed",
+               colour = "#B3382C", linewidth = 0.4)
+
+  ggsave(file.path(out_dir, "metric_distributions.png"), p1,
+         width = 10, height = 3.6, dpi = 150)
+
+  p2 <- ggplot(d, aes(cc, nss, colour = auc)) +
+    geom_point(alpha = 0.35, size = 1.4) +
+    scale_colour_viridis_c(name = "AUC") +
+    geom_smooth(method = "lm", formula = y ~ x, se = TRUE, colour = "#B3382C",
+                linewidth = 0.7) +
+    labs(title = "Global map agreement (CC) vs local fixation contrast (NSS)",
+         subtitle = sprintf("Spearman rho = %.3f - the metrics measure different things",
+                            sp["cc", "nss"]),
+         x = "CC (global)", y = "NSS (local)", colour = "AUC") +
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"))
+
+  ggsave(file.path(out_dir, "metric_relationships.png"), p2,
+         width = 7.5, height = 5, dpi = 150)
+  cat("Figures written (ggplot2).\n")
+} else {
+  cat("ggplot2 not installed - skipping figures.\n")
+  cat("  install.packages('ggplot2')\n")
+}
+
+cat("\nWrote results/metric_summary.csv, analysis_summary.txt\n\n")

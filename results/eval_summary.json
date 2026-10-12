@@ -1,0 +1,30 @@
+{
+  "n_images": 1003,
+  "dataset": "MIT1003 (Judd et al., ICCV 2009)",
+  "ground_truth": "authors' precomputed _fixMap.jpg fixation-density maps",
+  "model": "OpenCV Spectral Residual + Fine-Grained (Hou & Zhang 2007)",
+  "runtime_seconds": 147.7,
+  "metrics": {
+    "auc": {
+      "mean": 0.5324,
+      "sd": 0.1866,
+      "median": 0.5366,
+      "ci95_halfwidth": 0.0115,
+      "interpretation": "chance"
+    },
+    "cc": {
+      "mean": 0.2083,
+      "sd": 0.1736,
+      "median": 0.2052,
+      "ci95_halfwidth": 0.0107,
+      "interpretation": "usable"
+    },
+    "nss": {
+      "mean": 2.2427,
+      "sd": 1.4087,
+      "median": 1.9653,
+      "ci95_halfwidth": 0.0872,
+      "interpretation": "good"
+    }
+  }
+}
