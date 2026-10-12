@@ -71,6 +71,47 @@ what it cannot:
 Implemented in [`src/neuroinsight/provenance.py`](src/neuroinsight/provenance.py) — about
 80 lines, and the file worth reading first.
 
+## Deploy
+
+The app is a stateless FastAPI service plus static files, so it deploys as a container.
+
+### One-click (Render)
+
+1. Sign in at <https://render.com>
+2. **New → Blueprint**, select this repo, **Apply**
+
+`render.yaml` provisions everything: it builds `./Dockerfile`, runs on `$PORT`, and polls
+`/api/health`. You get a real HTTPS certificate — which matters, because browsers refuse
+camera access on plain HTTP.
+
+The free plan sleeps after 15 minutes idle and takes ~1–2 minutes to wake. Fine for
+showing a link to someone; for anything that must be reliably up, change `plan: free` to
+`plan: starter` in `render.yaml`.
+
+Two things to know before scaling past one instance:
+
+- **The result store is in-memory** (capped at 24 analyses). A permalink issued by
+  instance A 404s if a later request lands on instance B. Needs a shared store before
+  `numInstances: 2`.
+- **OCR needs a system binary.** `pytesseract` is only a Python wrapper, and the
+  preferred engine (Apple Vision) is macOS-only. The Dockerfile installs
+  `tesseract-ocr`; a deployment that skips it reports OCR as *unavailable* and the text
+  analysis comes back empty.
+
+### Temporary public link (demos only)
+
+Camera access requires a secure context, so a bare LAN address will not work. To hand
+someone a link from your own machine:
+
+```bash
+./scripts/tunnel.sh start    # prints an https://*.trycloudflare.com URL
+./scripts/tunnel.sh status
+./scripts/tunnel.sh stop
+```
+
+Dies when you stop it, changes every restart, needs your laptop awake. Do not put it in
+a portfolio — use the Render path above for that.
+
 ## Quick start
 
 ```bash
@@ -193,14 +234,17 @@ writing the verifier itself, where two DOIs I produced from memory (`10.1038/nrb
 
 ### Measured pipeline timing
 
-Per 1200×800 image on an Apple M4:
+Per 1200×800 image on an Apple M4. `literature` is the live Crossref lookup that
+backs every citation; it is memoised per process, so only the first analysis in a
+session pays for it.
 
 ```
-colour 0.05s · contrast 0.05s · luminance 0.06s · faces 0.15s
-ocr 0.82s · saliency 0.06s · interpretation 0.00s · literature 1.86s
-─────────────────────────────────────────────────────────────
-total 3.07s
+cold   ocr 0.82s · literature 5.4s · everything else 0.5s  → total 6.8s
+warm   ocr 0.82s · literature 0.00s · everything else 0.5s → total 1.4s
 ```
+
+Before caching, literature was 8.5 s of a 10.5 s pipeline — 79% of the runtime spent
+waiting on the network for references that never change.
 
 ## Models used
 
