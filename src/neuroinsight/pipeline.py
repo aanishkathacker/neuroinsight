@@ -118,6 +118,7 @@ def analyse(data: bytes) -> tuple[Analysis, np.ndarray, np.ndarray]:
     col = stage("colour", lambda: features.colour_features(img), {})
     con = stage("contrast", lambda: features.contrast_ratio(img), {})
     lum = stage("luminance", lambda: features.luminance_features(img), {})
+    comp = stage("composition", lambda: features.composition_features(img), {})
     faces = stage("faces", lambda: features.detect_faces(img),
                   {"count": 0, "faces": [], "total_area_pct": 0.0,
                    "largest_area_pct": 0.0})
@@ -127,9 +128,14 @@ def analyse(data: bytes) -> tuple[Analysis, np.ndarray, np.ndarray]:
 
     a.features = {
         "colour": col, "contrast": con, "luminance": lum,
-        "faces": faces, "text": text,
+        "composition": comp, "faces": faces, "text": text,
     }
     a.palette = col.get("palette", [])
+
+    # Text hierarchy depends on OCR, so it is derived rather than measured directly.
+    th = stage("text_hierarchy", lambda: features.text_hierarchy(text),
+               {"available": False, "reason": "ocr stage failed", "block_count": 0})
+    a.features["text_hierarchy"] = th
 
     # ------------------------------------------------------------------ saliency
     def _sal():
@@ -137,6 +143,10 @@ def analyse(data: bytes) -> tuple[Analysis, np.ndarray, np.ndarray]:
         return s, meta
 
     sal, meta = stage("saliency", _sal, (np.zeros((h, w), np.float32), {}))
+
+    focal = stage("focal_alignment", lambda: features.focal_alignment(sal),
+                  {"available": False, "reason": "saliency stage failed"})
+    a.features["focal_alignment"] = focal
 
     def _stats():
         return saliency.saliency_statistics(sal, img)

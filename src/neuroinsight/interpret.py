@@ -27,6 +27,9 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
     con = features["contrast"]
     faces = features["faces"]
     text = features["text"]
+    comp = features.get("composition") or {}
+    focal = features.get("focal_alignment") or {}
+    thier = features.get("text_hierarchy") or {}
 
     # ---------------------------------------------------------- attention / saliency
     top = sal_stats["top_region"]
@@ -74,6 +77,150 @@ def interpret(features: dict, sal_meta: dict, sal_stats: dict) -> list[dict]:
             refs=refs("hou2007", "itti2001", "henderson1999"),
         )
     )
+
+    # ------------------------------------------- composition (brand-facing)
+    # These are all direct computations on the pixels, so they stay MEASUREMENT.
+    # The wording is deliberately concrete and design-shop vocabulary ("visual
+    # weight", "breathing room") rather than perceptual-science jargon, because
+    # the audience for this half of the report is designers and marketers.
+    if comp:
+        off = comp.get("visual_weight_offcentre", 0.0)
+        even = comp.get("quadrant_evenness", 0.0)
+        ws = comp.get("whitespace_pct", 0.0)
+        quad = comp.get("heaviest_quadrant", "")
+        quadrant_name = {"tl": "top-left", "tr": "top-right",
+                         "bl": "bottom-left", "br": "bottom-right"}.get(quad, quad)
+
+        out.append(Finding.make(
+            title=(
+                "The design's visual weight sits " + (
+                    "almost dead centre" if off < 0.15 else
+                    "slightly off-centre" if off < 0.35 else
+                    "well off-centre")
+            ),
+            detail=(
+                f"Measuring where detail and contrast actually accumulate, the centre "
+                f"of visual mass sits at {100 * comp.get('visual_weight_centre_x', 0.5):.0f}% "
+                f"across and {100 * comp.get('visual_weight_centre_y', 0.5):.0f}% down the "
+                f"frame — a distance of {off:.2f} from dead centre (0.00 = perfectly "
+                f"centred, 1.00 = pushed into a corner). "
+                + ("Centred layouts feel stable and formal; an off-centre layout reads as "
+                   "more energetic. This is a property of the image, not a prediction "
+                   "about how anyone will feel about it."
+                   if off >= 0.15 else
+                   "A perfectly centred layout reads as stable and formal.")
+            ),
+            evidence=Evidence.MEASUREMENT,
+            value=round(off, 4),
+            unit="distance from centre (0 = centred, 1 = corner)",
+            refs=refs("treisman1980"),
+        ))
+
+        out.append(Finding.make(
+            title=(
+                f"Detail is piled into the {quadrant_name} quarter" if even < 0.28
+                else "Detail is spread fairly evenly across the frame"
+            ),
+            detail=(
+                f"The four quarters of the image carry {100 * even:.0f}% even "
+                f"distribution of visual detail (100% would be perfectly balanced across "
+                f"all four; {100 * 0.25:.0f}% means everything is in a single quarter). "
+                f"The heaviest quarter is the {quadrant_name}. "
+                + ("Clumped layouts direct the eye to one place but can leave large areas "
+                   "unnoticed. Even layouts give every element a fighting chance."
+                   if even < 0.28 else
+                   "An even spread means no single element dominates by sheer position.")
+            ),
+            evidence=Evidence.MEASUREMENT,
+            value=round(even, 4),
+            unit="quadrant evenness (0.25 = one corner, 1.0 = even)",
+            refs=refs("rosbergen1997"),
+        ))
+
+        out.append(Finding.make(
+            title=(
+                f"Breathing room is {'generous' if ws >= 30 else 'tight' if ws < 15 else 'moderate'}"
+                f" ({ws:.0f}% of the frame is quiet)"
+            ),
+            detail=(
+                f"{ws:.0f}% of the image contains almost no detail or contrast — the "
+                f"equivalent of empty space in a layout. "
+                + ("Generous whitespace gives the eye somewhere to rest and makes the "
+                   "busy elements read as deliberate. Too little and everything competes."
+                   if ws >= 30 else
+                   "Very little empty space means many elements are competing for the "
+                   "same attention. Whitespace is the cheapest way to create hierarchy."
+                   if ws < 15 else
+                   "A moderate amount of empty space is typical for a busy layout.")
+            ),
+            evidence=Evidence.MEASUREMENT,
+            value=ws,
+            unit="% of frame with minimal detail",
+            refs=refs("rosbergen1997"),
+        ))
+
+    # ------------------------------------------------- focal point / thirds
+    if focal.get("available"):
+        ratio = focal.get("thirds_alignment_ratio", 0.0)
+        on_thirds = focal.get("on_thirds_share", 0.0)
+        centred = focal.get("peak_is_centred")
+        out.append(Finding.make(
+            title=(
+                "Predicted attention lands on the rule-of-thirds grid"
+                if ratio > 0.75 else
+                "Predicted attention sits between the rule-of-thirds lines"
+            ),
+            detail=(
+                f"The saliency peak falls at {100 * focal.get('peak_x', 0):.0f}% across, "
+                f"{100 * focal.get('peak_y', 0):.0f}% down. {on_thirds:.0f}% of the "
+                f"predicted attention falls within 10% of the four thirds intersections. "
+                + ("Laying the main message on a thirds intersection is the classic "
+                   "layout rule and the model agrees with it here — which means the "
+                   "composition is working with the eye's habits, not against them."
+                   if ratio > 0.75 else
+                   "The eye's likely landing point is not on a thirds intersection. That "
+                   "is not an error — plenty of strong designs centre deliberately — but "
+                   "if the goal is effortless scanning, moving the focal element onto a "
+                   "thirds line usually helps."
+                   if not centred else
+                   "The design is centred rather than thirds-aligned, which reads as "
+                   "deliberate and stable rather than dynamic.")
+            ),
+            evidence=Evidence.MODEL_OUTPUT,
+            value=round(ratio, 4),
+            unit="thirds alignment (0-1)",
+            refs=refs("treisman1980"),
+        ))
+
+    # ------------------------------------------------------- text hierarchy
+    if thier.get("available"):
+        verdict = thier.get("verdict", "flat")
+        out.append(Finding.make(
+            title={
+                "clear": "There's a clear typographic hierarchy",
+                "moderate": "Type sizes are only slightly differentiated",
+                "flat": "All the text is roughly the same size — no clear hierarchy",
+            }.get(verdict, "Text hierarchy assessed"),
+            detail=(
+                f"{thier.get('block_count')} text blocks were detected. The largest is "
+                f"{thier.get('largest_height_px')}px tall; the next differs by only "
+                f"{100 * thier.get('top_step_ratio', 0):.0f}%. "
+                + ("A strong size jump means the reader's eye knows instantly what to "
+                   "read first. This design has that."
+                   if verdict == "clear" else
+                   "When every element is close to the same size, nothing reads as more "
+                   "important than anything else and the reader has to work out the "
+                   "hierarchy themselves. Bolding, scaling up the headline, or cutting "
+                   "the number of competing blocks all fix this."
+                   if verdict == "flat" else
+                   "There is some size differentiation, but a bigger gap would make the "
+                   "reading order unambiguous.")
+            ),
+            evidence=Evidence.MEASUREMENT,
+            value=round(thier.get("top_step_ratio", 0.0), 3),
+            unit="size difference between largest and second text block",
+            refs=refs("rosbergen1997"),
+        ))
 
     # ------------------------------------------------------------------- contrast
     out.append(

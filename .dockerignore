@@ -1,0 +1,27 @@
+# Keep the build context small and free of local-machine artefacts.
+#
+# data/ is 510 MB of MIT1003 evaluation fixtures that the running app never
+# touches - it is for the offline benchmark only, and is fetched on demand by
+# scripts/fetch_eval_data.sh.
+
+.git
+.github
+.venv
+.run
+data
+results
+analysis
+docs
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+.DS_Store
+*.log
+
+# Local-only notes and coursework. Kept out so the public image stays tidy.
+*.md
+!README.md
+
+# Editor noise
+.vscode
+.idea

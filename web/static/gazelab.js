@@ -400,24 +400,119 @@ function drawGazeOverlay() {
     g.save();
     g.beginPath(); g.rect(dx, dy, dw, dh); g.clip();
 
-    for (const f of lastMetrics.raw_fixations) {
+    const fx = lastMetrics.raw_fixations || [];
+
+    // During a replay, only fixations up to the current index are drawn, and the
+    // most recent one is highlighted, so the order of looking is legible.
+    const upto = replay.i == null ? fx.length : Math.max(1, replay.i + 1);
+
+    // Connect consecutive fixations with a faint line: the scanpath itself.
+    if (upto > 1) {
+      g.beginPath();
+      for (let k = 0; k < upto; k++) {
+        const px = dx + fx[k].x * dw, py = dy + fx[k].y * dh;
+        k === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+      }
+      g.strokeStyle = "rgba(37,99,235,.34)";
+      g.lineWidth = 1.6;
+      g.setLineDash([4, 4]);
+      g.stroke();
+      g.setLineDash([]);
+    }
+
+    for (let k = 0; k < upto; k++) {
+      const f = fx[k];
       const x = dx + f.x * dw, y = dy + f.y * dh;
-      const r = Math.min(34, Math.max(7, f.dur * 26));
+      const active = replay.i != null && k === replay.i;
+      const r = (Math.min(34, Math.max(7, f.dur * 26))) * (active ? 1.35 : 1);
       const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, "rgba(47,111,143,.62)");
+      grad.addColorStop(0, active ? "rgba(37,99,235,.85)" : "rgba(47,111,143,.62)");
       grad.addColorStop(1, "rgba(47,111,143,0)");
       g.fillStyle = grad;
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.arc(x, y, 3.4, 0, Math.PI * 2);
-      g.fillStyle = "rgba(20,60,90,.95)"; g.fill();
-      g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 1.2; g.stroke();
+
+      g.beginPath(); g.arc(x, y, active ? 5.4 : 3.4, 0, Math.PI * 2);
+      g.fillStyle = active ? "rgba(29,78,216,.98)" : "rgba(20,60,90,.95)";
+      g.fill();
+      g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 1.4; g.stroke();
+    }
+
+    // Replay cursor: a soft ring that sits on the fixation being "looked at".
+    if (replay.i != null && fx[replay.i]) {
+      const f = fx[replay.i];
+      const x = dx + f.x * dw, y = dy + f.y * dh;
+      g.beginPath();
+      g.arc(x, y, 14 + 5 * Math.sin(replay.tick / 6), 0, Math.PI * 2);
+      g.strokeStyle = "rgba(37,99,235,.55)";
+      g.lineWidth = 2;
+      g.stroke();
     }
     g.restore();
   };
   if (img.complete && img.naturalWidth) draw();
   else img.addEventListener("load", draw, { once: true });
   window.addEventListener("resize", draw);
+  replay.redraw = draw;
 }
+
+/**
+ * Replay the scanpath in the order the fixations actually happened.
+ *
+ * Uses the recorded start times, so pacing reflects real dwell rather than a fixed
+ * interval per dot. Speed is deliberately compressed (4x) so a 12-second session
+ * does not become tedious to watch on a results page nobody is waiting to finish.
+ */
+let replayRAF = null;
+const replay = { i: null, tick: 0, redraw: null, playing: false };
+
+function toggleReplay() {
+  const btn = $("#btn-replay");
+  if (replay.playing) { stopReplay(); return; }
+
+  const fx = lastMetrics?.raw_fixations || [];
+  if (fx.length < 2) {
+    btn.textContent = "Not enough fixations to replay";
+    btn.disabled = true;
+    return;
+  }
+  replay.playing = true;
+  replay.i = 0;
+  btn.textContent = "■ Stop replay";
+
+  const t0 = performance.now();
+  const start = fx[0].start;
+
+  const step = () => {
+    if (!replay.playing) return;
+    replay.tick++;
+    const elapsed = ((performance.now() - t0) / 1000) * 4;
+    // find the last fixation whose start time has passed
+    let idx = 0;
+    for (let k = 0; k < fx.length; k++) {
+      if (fx[k].start - start <= elapsed) idx = k; else break;
+    }
+    if (idx !== replay.i) {
+      replay.i = idx;
+      replay.redraw && replay.redraw();
+    }
+    const last = fx[fx.length - 1];
+    if (elapsed > last.start - start + last.dur + 0.6) { stopReplay(true); return; }
+    replayRAF = requestAnimationFrame(step);
+  };
+  replayRAF = requestAnimationFrame(step);
+}
+
+function stopReplay(finished) {
+  replay.playing = false;
+  if (replayRAF) cancelAnimationFrame(replayRAF);
+  replayRAF = null;
+  replay.i = null;
+  const btn = $("#btn-replay");
+  if (btn) btn.textContent = finished ? "↻ Replay again" : "▶ Replay my scanpath";
+  replay.redraw && replay.redraw();
+}
+
+$("#btn-replay").addEventListener("click", toggleReplay);
 
 function renderNetworks(nets) {
   const host = $("#network-list");

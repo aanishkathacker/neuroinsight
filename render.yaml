@@ -1,0 +1,30 @@
+# Render blueprint — deploy with one click from the repo's Render dashboard.
+#
+#   1. Sign in at https://render.com
+#   2. New -> Blueprint -> pick this repo -> Apply
+#
+# Render reads this file and provisions the service; you never touch a build
+# script. The image is built from ./Dockerfile.
+#
+# Cost note: `plan: free` sleeps after 15 minutes of inactivity and cold-starts
+# in ~1-2 minutes. For a portfolio link that is usually fine, but if you want it
+# awake for interviews, switch to `starter` (~$7/mo) and delete this line.
+
+services:
+  - type: web
+    name: neuroinsight
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+    # The in-memory result store is per-instance. With one replica, a permalink
+    # issued by one instance resolves on the same instance. If this is ever
+    # scaled to 2+, the store must move to Redis or a database first - see the
+    # "blocks public multi-user deployment" note in README.md.
+    numInstances: 1

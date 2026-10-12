@@ -147,13 +147,30 @@ def refs(*keys: str) -> list[str]:
     return [k for k in keys if k in LITERATURE]
 
 
+# query -> results, filled by retrieve_live(). See its docstring for why.
+_LIVE_CACHE: dict[tuple[str, int], list[dict]] = {}
+
+
 def retrieve_live(query: str, limit: int = 5, timeout: float = 8.0) -> list[dict]:
     """Search Crossref for peer-reviewed work matching a query.
 
     Uses the public Crossref REST API, which needs no API key. Results are real
     records returned by Crossref; we do not generate titles, DOIs or author lists.
     Network failure is non-fatal — we return an empty list and the report says so.
+
+    Results are memoised per-process. The same handful of queries fire on every
+    analysis, and Crossref returns the same answer each time, so re-fetching on every
+    upload is pure latency: it was 8.5 s of a 10.5 s pipeline, almost all of it spent
+    waiting on the network for data that never changes.
+
+    The cache is deliberately in-process and unbounded-by-age rather than written to
+    disk. A stale published reference is worse than a slow one, and a container that
+    restarts simply re-fetches once.
     """
+    key = (query.strip().lower(), limit)
+    if key in _LIVE_CACHE:
+        return _LIVE_CACHE[key]
+
     try:
         r = requests.get(
             "https://api.crossref.org/works",
@@ -169,6 +186,8 @@ def retrieve_live(query: str, limit: int = 5, timeout: float = 8.0) -> list[dict
         r.raise_for_status()
         items = r.json()["message"]["items"]
     except Exception:
+        # Do NOT memoise a failure. A transient outage should not pin the process to
+        # "no results" for the rest of its life.
         return []
 
     out = []
@@ -192,4 +211,5 @@ def retrieve_live(query: str, limit: int = 5, timeout: float = 8.0) -> list[dict
                 "url": f"https://doi.org/{it.get('DOI','')}",
             }
         )
+    _LIVE_CACHE[key] = out
     return out
