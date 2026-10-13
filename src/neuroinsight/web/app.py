@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from pathlib import Path
 
 import cv2
@@ -21,8 +22,44 @@ from .. import pipeline
 from ..report.pdf import build_pdf
 from ..vision import saliency
 
-ROOT = Path(__file__).resolve().parents[3]
-WEB = ROOT / "web"
+def _find_web_root() -> Path:
+    """Locate the repo's `web/` directory, which holds the HTML/CSS/JS.
+
+    The obvious `parents[3]` works for a source checkout and for `pip install -e .`,
+    but silently breaks for a normal (non-editable) install: the package then lives in
+    site-packages, so parents[3] is some directory inside the interpreter rather than
+    the repo, and every page 404s with a confusing "directory not found" from
+    StaticFiles instead of an obvious error.
+
+    Rather than trust the install mode, check the plausible locations in order and
+    return the first one that actually contains static/index.html. If none do, raise
+    immediately and say so - a clear failure beats a blank page in production.
+    """
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[3] / "web",              # source checkout / editable install
+        here.parents[2] / "web",
+        here.parents[1] / "web",
+        Path.cwd() / "web",                    # container WORKDIR /app
+        Path("/app/web"),                      # Dockerfile layout
+    ]
+    for c in candidates:
+        try:
+            if (c / "static" / "index.html").is_file():
+                return c
+        except OSError:
+            continue
+    raise RuntimeError(
+        "Could not locate the web/ directory. Looked in: "
+        + ", ".join(str(c) for c in candidates)
+        + ". Run the app from the repository root, or set NEUROINSIGHT_WEB to the "
+          "directory containing static/index.html."
+    )
+
+
+WEB = Path(os.environ["NEUROINSIGHT_WEB"]).resolve() if os.environ.get(
+    "NEUROINSIGHT_WEB"
+) else _find_web_root()
 
 app = FastAPI(title="NeuroInsight by Aanishka", version="0.1.0")
 
