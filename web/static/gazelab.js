@@ -78,12 +78,40 @@ $("#btn-consent").addEventListener("click", async () => {
     $("#cal-hint").textContent = "Loading the on-device face tracker (first run only)…";
     await tracker.start();
 
-    $("#cal-hint").textContent = "Starting camera…";
-    await tracker.openCamera();
+    /**
+ * Race the camera open against a deadline.
+ *
+ * getUserMedia() rejects promptly when permission is denied, but it can also sit
+ * pending indefinitely - when the permission prompt is buried behind another window,
+ * or when another app already holds the device. Without a deadline the user is left
+ * staring at "Starting..." with no feedback and no way forward, which reads as a
+ * broken app rather than a stuck prompt.
+ *
+ * The underlying request is NOT cancelled on timeout. Browsers offer no way to abort a
+ * pending permission prompt, so abandoning it would leave a stray dialog popping up
+ * after the user has already moved on. We stop waiting and explain instead.
+ */
+function openCameraWithTimeout(ms = 25000) {
+  return Promise.race([
+    tracker.openCamera(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timed out waiting for the camera.")), ms)),
+  ]);
+}
+
+$("#cal-hint").textContent = "Starting camera…";
+    await openCameraWithTimeout();
     runCalibration();
   } catch (err) {
     const msg = String(err?.message || err);
-    if (/NotAllowed|Permission/i.test(msg)) {
+    if (/timed out waiting for the camera/i.test(msg)) {
+      fatal(`The browser never answered the camera request.<br><br>
+        This usually means the permission prompt is hidden behind another window, or the
+        camera is already in use by another app. Check your browser's address-bar camera
+        icon, then try again.<br><br>
+        You can still use <a href="/" style="color:#7fc4e8">image analysis</a>, or view a
+        demo session from the start screen.`);
+    } else if (/NotAllowed|Permission/i.test(msg)) {
       fatal(`Camera permission was declined.<br><br>To enable it: click the camera icon in your
         browser's address bar &rarr; <em>Allow</em> for this site, then reload.<br><br>
         You can still use <a href="/" style="color:#7fc4e8">image analysis</a> without a camera.`);

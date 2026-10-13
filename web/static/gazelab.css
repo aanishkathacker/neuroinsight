@@ -535,3 +535,29 @@ table.aoi tr:last-child td { border-bottom: none; }
   .net-tag { margin-left: 0; }
   .brain-card canvas { height: 280px; }
 }
+/* ---------------------------------------------------------------- cold start */
+/* Render's free tier sleeps after ~15 min idle. Shown once a request has clearly
+   outlasted any plausible warm response, so a slow wake is never mistaken for a
+   hang. */
+.coldstart {
+  display: flex; gap: 14px; align-items: flex-start;
+  max-width: 620px; margin: 0 auto 22px;
+  padding: 15px 18px;
+  background: var(--gl-accent-soft);
+  border: 1px solid var(--gl-accent-line);
+  border-radius: var(--gl-r);
+  font-size: 13.5px; line-height: 1.6; color: var(--gl-ink-2);
+}
+.coldstart strong { display: block; color: var(--gl-ink); margin-bottom: 3px; }
+.spinner {
+  flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px;
+  border: 2.5px solid var(--gl-accent-line);
+  border-top-color: var(--gl-accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+}

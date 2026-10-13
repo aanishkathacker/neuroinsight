@@ -25,6 +25,17 @@
 </header>
 
 <main>
+    <!-- Render's free tier sleeps after ~15 min idle. The first request then spends
+         30-60s waking the container, which looks identical to a hung page unless the
+         user is told what is happening. Shown only while a request is genuinely slow. -->
+    <div id="coldstart" class="coldstart" hidden>
+      <span class="spinner" aria-hidden="true"></span>
+      <div>
+        <strong>Waking up the server…</strong>
+        This app runs on a free tier that sleeps when unused, so the first visit after
+        a break takes up to a minute. Every request after this is fast.
+      </div>
+    </div>
   <!-- ============================ UPLOAD VIEW ============================ -->
   <section id="view-upload" class="view active">
     <div class="hero">

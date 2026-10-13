@@ -88,6 +88,16 @@
     $("#error").hidden = true;
     setStatus("Analysing your image…", "uploading");
 
+    // The stage captions below are paced guesses for a warm server. On a free tier
+    // the container sleeps after ~15 min idle, and the first request then spends
+    // 30-60s waking it - during which the caption would sit frozen on "uploading",
+    // which is indistinguishable from a hang. Say what is actually happening once
+    // the request has clearly outlasted any plausible cold start.
+    const coldTimer = setTimeout(() => {
+      const el = $("#coldstart");
+      if (el && !$("#status").hidden) el.hidden = false;
+    }, 8000);
+
     const steps = [
       [700, "computing colour and contrast"],
       [1500, "detecting faces and reading text"],
@@ -118,6 +128,9 @@
       fail(err.message || String(err));
     } finally {
       t.forEach(clearTimeout);
+      clearTimeout(coldTimer);
+      const cold = $("#coldstart");
+      if (cold) cold.hidden = true;
       stopStatus();
       input.value = "";
     }
