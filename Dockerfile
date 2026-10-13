@@ -23,9 +23,6 @@ RUN apt-get update \
       curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Fail fast on a broken dependency rather than at first request.
-RUN python -c "import cv2, numpy, fastapi, reportlab; print('deps ok', cv2.__version__)"
-
 WORKDIR /app
 
 # src/ is small and pyproject declares no build-time codegen, so there is no layer-caching
@@ -36,6 +33,26 @@ COPY web ./web
 
 # Regular install (not -e): see the CMD note below for why.
 RUN pip install --no-cache-dir .
+
+# Fail fast on a broken dependency rather than at first request.
+#
+# This check MUST come after `pip install`. It originally sat directly after the
+# apt-get block, which meant it ran against a bare python:3.13-slim with no
+# packages at all and died on `ModuleNotFoundError: No module named 'cv2'` -
+# failing the Render build on step 3 of 10 for a dependency that was never
+# supposed to be installed yet.
+RUN python -c "import cv2, numpy, fastapi, reportlab; print('deps ok', cv2.__version__)"
+
+# Confirm the OCR binary is actually present. pytesseract is only a wrapper, so
+# the pip install above succeeds happily on a host with no tesseract at all -
+# and OCR then reports "unavailable" at runtime rather than at build time.
+#
+# `command -v` first on purpose. `tesseract --version | head -1` would always exit 0
+# because a pipeline reports the status of its LAST command, so the check would pass
+# even with tesseract missing - a validation that cannot fail is worse than none.
+RUN command -v tesseract > /dev/null \
+ && tesseract --version 2>&1 | head -1 \
+ && python -c "import pytesseract; print('pytesseract wrapper ok')"
 
 # Unprivileged runtime user. Nothing here writes to the image.
 RUN useradd --create-home --uid 10001 neuro \
